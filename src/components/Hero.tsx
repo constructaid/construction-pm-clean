@@ -70,25 +70,25 @@ export function Hero() {
 
           {/* Stats Section */}
           <div class="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-3xl mx-auto">
-            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 border border-white border-opacity-20">
-              <div class="text-3xl font-bold text-white">50+</div>
-              <div class="text-blue-100 text-sm mt-1">Active Projects</div>
+            <div style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px);" class="rounded-lg p-6 border-2 border-white shadow-xl">
+              <div style="color: white;" class="text-3xl font-bold">50+</div>
+              <div style="color: rgba(255, 255, 255, 0.9);" class="text-sm mt-1 font-medium">Active Projects</div>
             </div>
-            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 border border-white border-opacity-20">
-              <div class="text-3xl font-bold text-white">$250M+</div>
-              <div class="text-blue-100 text-sm mt-1">Total Budget Managed</div>
+            <div style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px);" class="rounded-lg p-6 border-2 border-white shadow-xl">
+              <div style="color: white;" class="text-3xl font-bold">$250M+</div>
+              <div style="color: rgba(255, 255, 255, 0.9);" class="text-sm mt-1 font-medium">Total Budget Managed</div>
             </div>
-            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 border border-white border-opacity-20">
-              <div class="text-3xl font-bold text-white">98%</div>
-              <div class="text-blue-100 text-sm mt-1">On-Time Delivery</div>
+            <div style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px);" class="rounded-lg p-6 border-2 border-white shadow-xl">
+              <div style="color: white;" class="text-3xl font-bold">98%</div>
+              <div style="color: rgba(255, 255, 255, 0.9);" class="text-sm mt-1 font-medium">On-Time Delivery</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Wave */}
-      <div class="absolute bottom-0 left-0 right-0">
-        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
+      <div class="absolute bottom-[-1px] left-0 right-0 pointer-events-none">
+        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto block">
           <path d="M0 0L60 10C120 20 240 40 360 46.7C480 53 600 47 720 43.3C840 40 960 40 1080 46.7C1200 53 1320 67 1380 73.3L1440 80V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V0Z" fill="#F9FAFB"/>
         </svg>
       </div>
