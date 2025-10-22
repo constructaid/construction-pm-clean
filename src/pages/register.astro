@@ -1,0 +1,77 @@
+---
+/**
+ * Registration Page - User Onboarding Flow
+ * Allows users to create accounts with role selection
+ * Styled to match ConstructAid.net color scheme
+ */
+import Layout from '../layouts/Layout.astro';
+import RegistrationForm from '../components/RegistrationForm';
+---
+
+<Layout title="Register - ConstructAid">
+  <div class="min-h-screen bg-background-light flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl w-full space-y-8">
+      {/* Header */}
+      <div class="text-center">
+        <h1 class="text-4xl font-bold text-text-primary mb-2">
+          Create Your Account
+        </h1>
+        <p class="text-lg text-text-secondary">
+          Join ConstructAid to streamline your construction project management
+        </p>
+      </div>
+
+      {/* Registration Form Card */}
+      <div class="bg-background-white rounded-lg shadow-ca-lg p-8">
+        <RegistrationForm client:load />
+      </div>
+
+      {/* Footer Links */}
+      <div class="text-center">
+        <p class="text-text-secondary">
+          Already have an account?{' '}
+          <a href="/login" class="text-primary-orange hover:underline font-semibold">
+            Sign in here
+          </a>
+        </p>
+      </div>
+
+      {/* Features Overview */}
+      <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="w-12 h-12 bg-primary-orange rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-text-primary mb-1">Role-Based Access</h3>
+          <p class="text-sm text-text-secondary">Customized dashboards for every stakeholder</p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-12 h-12 bg-primary-orange rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-text-primary mb-1">Real-Time Updates</h3>
+          <p class="text-sm text-text-secondary">Stay synchronized with your team</p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-12 h-12 bg-primary-orange rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-text-primary mb-1">AI-Powered Tools</h3>
+          <p class="text-sm text-text-secondary">Intelligent automation for your workflows</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* Additional custom styles if needed */
+</style>

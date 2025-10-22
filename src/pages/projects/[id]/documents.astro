@@ -1,0 +1,143 @@
+---
+/**
+ * Project Documents Page
+ * Displays and manages project folder structure with document uploads
+ * Route: /projects/[id]/documents
+ */
+import Layout from '../../../layouts/Layout.astro';
+import DocumentFolders from '../../../components/DocumentFolders';
+
+// Get project ID from URL params
+const { id } = Astro.params;
+
+// TODO: In production, fetch project data from API and verify user access
+const project = {
+  _id: id,
+  name: 'Downtown Office Building',
+  projectNumber: '2025-001'
+};
+---
+
+<Layout title={`Documents - ${project.name} - ConstructAid`}>
+  <div class="min-h-screen bg-background-light">
+    {/* Header */}
+    <div class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-6 py-4">
+        {/* Breadcrumb */}
+        <nav class="flex items-center space-x-2 text-sm text-text-secondary mb-4">
+          <a href="/dashboard/general-contractor" class="hover:text-primary-orange">Dashboard</a>
+          <span>›</span>
+          <a href="/projects" class="hover:text-primary-orange">Projects</a>
+          <span>›</span>
+          <a href={`/projects/${id}`} class="hover:text-primary-orange">{project.name}</a>
+          <span>›</span>
+          <span class="text-text-primary">Documents</span>
+        </nav>
+
+        {/* Page Title */}
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-text-primary mb-1">Project Documents</h1>
+            <p class="text-text-secondary">
+              {project.projectNumber} • {project.name}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div class="flex items-center space-x-3">
+            <button class="px-4 py-2 border border-gray-300 text-text-primary rounded-md hover:bg-gray-50 transition-colors">
+              Export List
+            </button>
+            <button class="px-4 py-2 bg-primary-orange text-white rounded-md hover:bg-opacity-90 transition-colors">
+              + Upload Document
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Main Content */}
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      {/* Project Tabs */}
+      <div class="flex space-x-6 border-b border-gray-200 mb-6">
+        <a
+          href={`/projects/${id}`}
+          class="pb-3 px-1 font-medium text-sm border-b-2 border-transparent text-text-secondary hover:text-text-primary transition-colors"
+        >
+          Overview
+        </a>
+        <a
+          href={`/projects/${id}/documents`}
+          class="pb-3 px-1 font-medium text-sm border-b-2 border-primary-orange text-primary-orange"
+        >
+          Documents
+        </a>
+        <a
+          href={`/projects/${id}/tasks`}
+          class="pb-3 px-1 font-medium text-sm border-b-2 border-transparent text-text-secondary hover:text-text-primary transition-colors"
+        >
+          Tasks
+        </a>
+        <a
+          href={`/projects/${id}/schedule`}
+          class="pb-3 px-1 font-medium text-sm border-b-2 border-transparent text-text-secondary hover:text-text-primary transition-colors"
+        >
+          Schedule
+        </a>
+        <a
+          href={`/projects/${id}/team`}
+          class="pb-3 px-1 font-medium text-sm border-b-2 border-transparent text-text-secondary hover:text-text-primary transition-colors"
+        >
+          Team
+        </a>
+        <a
+          href={`/projects/${id}/budget`}
+          class="pb-3 px-1 font-medium text-sm border-b-2 border-transparent text-text-secondary hover:text-text-primary transition-colors"
+        >
+          Budget
+        </a>
+      </div>
+
+      {/* Document Folders Component */}
+      <DocumentFolders client:load projectId={id} />
+
+      {/* Info Banner */}
+      <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start space-x-3">
+          <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h4 class="font-semibold text-blue-900 mb-1">Document Organization</h4>
+            <p class="text-sm text-blue-800">
+              Documents are organized by folder type and can be categorized using CSI MasterFormat divisions for submittals and shop drawings. All uploads are automatically timestamped and tagged with the uploader's information.
+            </p>
+            <ul class="mt-2 text-sm text-blue-800 list-disc list-inside space-y-1">
+              <li>Supported file types: PDF, DOC, DOCX, XLS, XLSX, DWG, DXF, JPG, PNG</li>
+              <li>Maximum file size: 50MB per file</li>
+              <li>Version control is automatically maintained for document revisions</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* Custom animations */
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+</style>

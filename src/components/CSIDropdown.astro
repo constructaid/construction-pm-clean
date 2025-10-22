@@ -1,0 +1,78 @@
+---
+/**
+ * CSI MasterFormat Division Dropdown Component
+ * Provides standardized construction division categorization
+ * Based on CSI MasterFormat specification divisions
+ */
+
+interface Props {
+  name?: string;
+  id?: string;
+  required?: boolean;
+  value?: string;
+  class?: string;
+}
+
+const {
+  name = "csiDivision",
+  id = "csiDivision",
+  required = false,
+  value = "",
+  class: className = ""
+} = Astro.props;
+
+// CSI MasterFormat Divisions (Standard Construction Specification)
+const csiDivisions = [
+  { code: '00', name: 'Procurement and Contracting Requirements' },
+  { code: '01', name: 'General Requirements' },
+  { code: '02', name: 'Existing Conditions' },
+  { code: '03', name: 'Concrete' },
+  { code: '04', name: 'Masonry' },
+  { code: '05', name: 'Metals' },
+  { code: '06', name: 'Wood, Plastics, and Composites' },
+  { code: '07', name: 'Thermal and Moisture Protection' },
+  { code: '08', name: 'Openings' },
+  { code: '09', name: 'Finishes' },
+  { code: '10', name: 'Specialties' },
+  { code: '11', name: 'Equipment' },
+  { code: '12', name: 'Furnishings' },
+  { code: '13', name: 'Special Construction' },
+  { code: '14', name: 'Conveying Equipment' },
+  { code: '21', name: 'Fire Suppression' },
+  { code: '22', name: 'Plumbing' },
+  { code: '23', name: 'HVAC' },
+  { code: '25', name: 'Integrated Automation' },
+  { code: '26', name: 'Electrical' },
+  { code: '27', name: 'Communications' },
+  { code: '28', name: 'Electronic Safety and Security' },
+  { code: '31', name: 'Earthwork' },
+  { code: '32', name: 'Exterior Improvements' },
+  { code: '33', name: 'Utilities' },
+];
+---
+
+<select
+  name={name}
+  id={id}
+  required={required}
+  value={value}
+  class={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-orange focus:border-transparent text-text-primary ${className}`}
+>
+  <option value="">Select CSI Division...</option>
+  {csiDivisions.map((division) => (
+    <option value={division.code} selected={value === division.code}>
+      Division {division.code} - {division.name}
+    </option>
+  ))}
+</select>
+
+<style>
+  select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+  }
+</style>

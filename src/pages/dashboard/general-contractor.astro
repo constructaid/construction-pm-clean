@@ -1,0 +1,108 @@
+---
+/**
+ * General Contractor Dashboard
+ * Customized dashboard for GC role with project management tools
+ * Features: Sidebar navigation, project summaries, to-do list, AI chatbot, forms
+ */
+import Layout from '../../layouts/Layout.astro';
+import DashboardSidebar from '../../components/dashboard/DashboardSidebar';
+import DashboardStats from '../../components/dashboard/DashboardStats';
+import ProjectSummaryList from '../../components/dashboard/ProjectSummaryList';
+import TodoListWidget from '../../components/dashboard/TodoListWidget';
+import AIChatbotWidget from '../../components/dashboard/AIChatbotWidget';
+import FormsLogsTab from '../../components/dashboard/FormsLogsTab';
+import { getMockSession } from '../../lib/auth/mockAuth';
+
+// Get mock user for development (bypasses auth)
+const mockUser = getMockSession();
+const currentUser = {
+  id: mockUser?._id || 'temp-user-id',
+  name: `${mockUser?.firstName || 'John'} ${mockUser?.lastName || 'Smith'}`,
+  role: mockUser?.role || 'GC',
+  company: mockUser?.company || 'Construction LLC'
+};
+---
+
+<Layout title="General Contractor Dashboard - ConstructAid">
+  <div class="flex h-screen bg-background-light">
+    {/* Left Sidebar - Navigation */}
+    <aside class="w-64 bg-primary-dark text-white flex-shrink-0">
+      <DashboardSidebar client:load currentUser={currentUser} />
+    </aside>
+
+    {/* Main Content Area */}
+    <main class="flex-1 overflow-y-auto">
+      <div class="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-text-primary mb-2">
+            Welcome back, {currentUser.name}
+          </h1>
+          <p class="text-text-secondary">
+            {currentUser.company} • General Contractor Dashboard
+          </p>
+        </div>
+
+        {/* Dashboard Stats */}
+        <div class="mb-8">
+          <DashboardStats client:load userId={currentUser.id} />
+        </div>
+
+        {/* Main Content Grid */}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Projects & Forms (2/3 width) */}
+          <div class="lg:col-span-2 space-y-6">
+            {/* Project Summary */}
+            <div class="bg-white rounded-lg shadow-ca-md p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-text-primary">Your Projects</h2>
+                <a
+                  href="/projects/new"
+                  class="bg-primary-orange text-white px-4 py-2 rounded-md hover:bg-opacity-90 text-sm font-medium"
+                >
+                  + New Project
+                </a>
+              </div>
+              <ProjectSummaryList client:load userId={currentUser.id} />
+            </div>
+
+            {/* Forms/Logs Tab */}
+            <div class="bg-white rounded-lg shadow-ca-md p-6">
+              <h2 class="text-xl font-bold text-text-primary mb-4">Forms & Daily Logs</h2>
+              <FormsLogsTab client:load projectId="temp-project-id" />
+            </div>
+          </div>
+
+          {/* Right Column - To-Do List & Chatbot (1/3 width) */}
+          <div class="space-y-6">
+            {/* To-Do List Widget */}
+            <div class="bg-white rounded-lg shadow-ca-md p-6">
+              <h2 class="text-xl font-bold text-text-primary mb-4">To-Do List</h2>
+              <TodoListWidget client:load userId={currentUser.id} />
+            </div>
+
+            {/* AI Chatbot Widget */}
+            <div class="bg-white rounded-lg shadow-ca-md p-6">
+              <h2 class="text-xl font-bold text-text-primary mb-4">AI Assistant</h2>
+              <AIChatbotWidget client:load />
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</Layout>
+
+<style>
+  /* Custom scrollbar for sidebar */
+  aside::-webkit-scrollbar {
+    width: 6px;
+  }
+  aside::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  aside::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+</style>

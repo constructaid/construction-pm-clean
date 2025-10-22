@@ -1,0 +1,371 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Navbar } from '../components/Navbar';
+---
+
+<Layout title="Reports - Construction PM">
+  <Navbar client:load />
+
+  <main class="min-h-screen" style="background-color: #F9F9F9;">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold" style="color: #030E27;">Reports & Analytics</h1>
+        <p class="mt-2" style="color: #1F1F1F;">Track project performance and generate insights</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Projects -->
+        <div class="bg-white rounded-lg shadow p-6" style="border: 1px solid #F1F1F1;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium" style="color: #1F1F1F;">Total Projects</p>
+              <p class="text-3xl font-bold mt-2" style="color: #030E27;">24</p>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: #FFF4ED;">
+              <svg class="h-6 w-6" style="color: #FF5E15;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+          </div>
+          <p class="text-sm mt-4" style="color: #00C853;">↑ 12% from last month</p>
+        </div>
+
+        <!-- Active Projects -->
+        <div class="bg-white rounded-lg shadow p-6" style="border: 1px solid #F1F1F1;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium" style="color: #1F1F1F;">Active Projects</p>
+              <p class="text-3xl font-bold mt-2" style="color: #030E27;">18</p>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: #E8F5E9;">
+              <svg class="h-6 w-6" style="color: #00C853;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <p class="text-sm mt-4" style="color: #00C853;">↑ 8% from last month</p>
+        </div>
+
+        <!-- Completed Projects -->
+        <div class="bg-white rounded-lg shadow p-6" style="border: 1px solid #F1F1F1;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium" style="color: #1F1F1F;">Completed</p>
+              <p class="text-3xl font-bold mt-2" style="color: #030E27;">6</p>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: #E3F2FD;">
+              <svg class="h-6 w-6" style="color: #2196F3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+          </div>
+          <p class="text-sm mt-4" style="color: #00C853;">↑ 25% completion rate</p>
+        </div>
+
+        <!-- Total Budget -->
+        <div class="bg-white rounded-lg shadow p-6" style="border: 1px solid #F1F1F1;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium" style="color: #1F1F1F;">Total Budget</p>
+              <p class="text-3xl font-bold mt-2" style="color: #030E27;">$2.4M</p>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: #FFF4ED;">
+              <svg class="h-6 w-6" style="color: #FF5E15;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <p class="text-sm mt-4" style="color: #1F1F1F;">85% utilized</p>
+        </div>
+      </div>
+
+      <!-- Construction Management Reports -->
+      <div class="space-y-6">
+        <!-- Work in Progress Report -->
+        <div class="bg-white rounded-lg shadow" style="border: 1px solid #F1F1F1;">
+          <div class="p-6 border-b" style="border-color: #F1F1F1;">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold" style="color: #030E27;">Work in Progress</h2>
+              <button class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors" style="background-color: #FF5E15; color: white;">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead style="background-color: #F9F9F9;">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Project Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Progress</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Budget</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Spent</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Due Date</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y" style="background-color: white; border-color: #F1F1F1;">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">Downtown Office Complex</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF4ED; color: #FF5E15;">In Progress</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-24 rounded-full h-2 mr-2" style="background-color: #F1F1F1;">
+                        <div class="h-2 rounded-full" style="width: 65%; background-color: #FF5E15;"></div>
+                      </div>
+                      <span class="text-sm" style="color: #1F1F1F;">65%</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">$850,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">$552,500</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Dec 15, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">Riverside Shopping Mall</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF4ED; color: #FF5E15;">In Progress</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-24 rounded-full h-2 mr-2" style="background-color: #F1F1F1;">
+                        <div class="h-2 rounded-full" style="width: 42%; background-color: #FF5E15;"></div>
+                      </div>
+                      <span class="text-sm" style="color: #1F1F1F;">42%</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">$1,200,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">$504,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Mar 30, 2026</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">Harbor Bridge Renovation</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF4ED; color: #FF5E15;">In Progress</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="w-24 rounded-full h-2 mr-2" style="background-color: #F1F1F1;">
+                        <div class="h-2 rounded-full" style="width: 78%; background-color: #FF5E15;"></div>
+                      </div>
+                      <span class="text-sm" style="color: #1F1F1F;">78%</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">$2,500,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">$1,950,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Nov 20, 2025</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Submittal Log -->
+        <div class="bg-white rounded-lg shadow" style="border: 1px solid #F1F1F1;">
+          <div class="p-6 border-b" style="border-color: #F1F1F1;">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold" style="color: #030E27;">Submittal Log</h2>
+              <button class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors" style="background-color: #FF5E15; color: white;">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead style="background-color: #F9F9F9;">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Submittal #</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Project</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Description</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Spec Section</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Submitted</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Due Date</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y" style="background-color: white; border-color: #F1F1F1;">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">SUB-001</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Downtown Office</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Structural Steel Shop Drawings</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">05 12 00</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #E8F5E9; color: #00C853;">Approved</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 1, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 8, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">SUB-002</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Riverside Mall</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">HVAC Equipment Specifications</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">23 05 00</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF3E0; color: #FF9800;">Under Review</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 5, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 12, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">SUB-003</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Harbor Bridge</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Concrete Mix Design</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">03 30 00</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF4ED; color: #FF5E15;">Pending</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 10, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 17, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">SUB-004</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Downtown Office</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Electrical Panel Schedule</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">26 24 00</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #E8F5E9; color: #00C853;">Approved</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Sep 28, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 5, 2025</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Request for Information (RFI) Log -->
+        <div class="bg-white rounded-lg shadow" style="border: 1px solid #F1F1F1;">
+          <div class="p-6 border-b" style="border-color: #F1F1F1;">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold" style="color: #030E27;">Request for Information (RFI) Log</h2>
+              <button class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors" style="background-color: #FF5E15; color: white;">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead style="background-color: #F9F9F9;">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">RFI #</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Project</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Subject</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">From</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Date Issued</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Response Due</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y" style="background-color: white; border-color: #F1F1F1;">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">RFI-001</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Downtown Office</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Clarify foundation depth requirements</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">General Contractor</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #E8F5E9; color: #00C853;">Closed</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Sep 15, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Sep 22, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">RFI-002</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Riverside Mall</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Fire protection system routing conflict</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">MEP Contractor</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF4ED; color: #FF5E15;">Open</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 8, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 15, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">RFI-003</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Harbor Bridge</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Material specifications for expansion joints</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Structural Engineer</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF3E0; color: #FF9800;">In Review</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 12, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 19, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">RFI-004</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Downtown Office</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Window glazing color selection</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Architect</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF4ED; color: #FF5E15;">Open</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 10, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 17, 2025</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Change Order Log -->
+        <div class="bg-white rounded-lg shadow" style="border: 1px solid #F1F1F1;">
+          <div class="p-6 border-b" style="border-color: #F1F1F1;">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold" style="color: #030E27;">Change Order Log</h2>
+              <button class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors" style="background-color: #FF5E15; color: white;">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead style="background-color: #F9F9F9;">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">CO #</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Project</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Description</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Reason</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Cost Impact</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Time Impact</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: #757575;">Date</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y" style="background-color: white; border-color: #F1F1F1;">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">CO-001</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Downtown Office</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Additional elevator shaft</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Owner Request</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #E8F5E9; color: #00C853;">Approved</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #00C853;">+$125,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">+14 days</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Sep 20, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">CO-002</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Riverside Mall</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Upgraded HVAC system</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Design Change</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #FFF4ED; color: #FF5E15;">Pending</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #00C853;">+$85,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">+7 days</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 5, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">CO-003</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Harbor Bridge</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Enhanced corrosion protection</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Field Condition</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #E8F5E9; color: #00C853;">Approved</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #00C853;">+$45,000</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">0 days</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Oct 1, 2025</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #030E27;">CO-004</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Downtown Office</td>
+                  <td class="px-6 py-4 text-sm" style="color: #1F1F1F;">Delete redundant plumbing fixtures</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Value Engineering</td>
+                  <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 text-xs font-medium rounded-full" style="background-color: #E8F5E9; color: #00C853;">Approved</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" style="color: #D32F2F;">-$12,500</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">-2 days</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: #1F1F1F;">Sep 28, 2025</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>

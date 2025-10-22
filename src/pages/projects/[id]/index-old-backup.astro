@@ -1,0 +1,266 @@
+---
+/**
+ * Individual Project Dashboard
+ * Shows detailed view of a specific project with all its information
+ */
+import Layout from '../../../layouts/Layout.astro';
+import { Navbar } from '../../../components/Navbar.tsx';
+import ProjectDashboardNav from '../../../components/ProjectDashboardNav.tsx';
+
+export const prerender = false;
+
+// Get project ID from URL params
+const { id } = Astro.params;
+
+// In a real app, you'd fetch this from the database
+// For now, we'll pass the ID to the client component
+---
+
+<Layout title="Project Dashboard - ConstructAid">
+  <Navbar client:load />
+
+  <div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Back button -->
+      <div class="mb-6">
+        <a
+          href="/projects"
+          class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Back to Projects
+        </a>
+      </div>
+
+      <!-- Project Dashboard Content -->
+      <div id="project-dashboard" data-project-id={id}>
+        <div class="text-center py-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style="border-color: #3D9991;"></div>
+          <p class="mt-4 text-gray-600">Loading project details...</p>
+        </div>
+      </div>
+
+      <!-- Project Navigation -->
+      <div id="project-nav-container" class="mt-8" style="display: none;">
+        <ProjectDashboardNav client:load projectId={id!} />
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  // Fetch project data and render dashboard
+  const dashboardElement = document.getElementById('project-dashboard');
+  const projectId = dashboardElement?.getAttribute('data-project-id');
+
+  if (projectId && dashboardElement) {
+    fetch(`/api/projects/${projectId}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.project) {
+          renderProjectDashboard(data.project, dashboardElement);
+          // Show navigation after dashboard loads
+          const navContainer = document.getElementById('project-nav-container');
+          if (navContainer) {
+            navContainer.style.display = 'block';
+          }
+        } else {
+          renderError('Project not found', dashboardElement);
+        }
+      })
+      .catch(error => {
+        console.error('Error loading project:', error);
+        renderError('Failed to load project', dashboardElement);
+      });
+  }
+
+  function formatCurrency(amount: number) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  }
+
+  function formatDate(dateString: string) {
+    if (!dateString) return 'Not set';
+    return new Date(dateString).toLocaleDateString();
+  }
+
+  function getStatusColor(status: string) {
+    switch (status) {
+      case 'completed': return '#3D9991';
+      case 'in_progress': return '#4BAAD8';
+      case 'planning': return '#FF5E15';
+      case 'on_hold': return '#F1F1F1';
+      case 'cancelled': return '#1F1F1F';
+      default: return '#F1F1F1';
+    }
+  }
+
+  function renderProjectDashboard(project: any, container: HTMLElement) {
+    const statusColor = getStatusColor(project.status);
+    const isLightBg = project.status === 'on_hold';
+    const textColor = isLightBg ? '#1F1F1F' : '#FFFFFF';
+
+    container.innerHTML = `
+      <!-- Project Header -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex justify-between items-start mb-4">
+          <div class="flex-1">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">${project.name}</h1>
+            <p class="text-gray-600">${project.description || 'No description provided'}</p>
+          </div>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ml-4" style="background-color: ${statusColor}; color: ${textColor};">
+            ${project.status.replace('_', ' ').toUpperCase()}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <div class="bg-gray-50 rounded-lg p-4">
+            <p class="text-sm text-gray-600 mb-1">Project Number</p>
+            <p class="text-lg font-semibold text-gray-900">${project.projectNumber}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4">
+            <p class="text-sm text-gray-600 mb-1">Total Budget</p>
+            <p class="text-lg font-semibold text-gray-900">${formatCurrency(project.totalBudget || 0)}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4">
+            <p class="text-sm text-gray-600 mb-1">Start Date</p>
+            <p class="text-lg font-semibold text-gray-900">${formatDate(project.startDate)}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4">
+            <p class="text-sm text-gray-600 mb-1">Est. Completion</p>
+            <p class="text-lg font-semibold text-gray-900">${formatDate(project.estimatedCompletion)}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project Details Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column (2/3) -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Location Details -->
+          <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Location</h2>
+            <div class="space-y-2">
+              <p class="text-gray-700"><span class="font-medium">Address:</span> ${project.address || 'Not specified'}</p>
+              <p class="text-gray-700"><span class="font-medium">City:</span> ${project.city || 'Not specified'}</p>
+              <p class="text-gray-700"><span class="font-medium">State:</span> ${project.state || 'Not specified'}</p>
+              <p class="text-gray-700"><span class="font-medium">Zip Code:</span> ${project.zipCode || 'Not specified'}</p>
+            </div>
+          </div>
+
+          <!-- Budget Breakdown -->
+          <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Budget Overview</h2>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                <span class="text-gray-600">Total Budget</span>
+                <span class="font-semibold text-gray-900">${formatCurrency(project.totalBudget || 0)}</span>
+              </div>
+              <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                <span class="text-gray-600">Spent</span>
+                <span class="font-semibold text-red-600">${formatCurrency(project.spentBudget || 0)}</span>
+              </div>
+              <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                <span class="text-gray-600">Committed</span>
+                <span class="font-semibold text-yellow-600">${formatCurrency(project.committedBudget || 0)}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Remaining</span>
+                <span class="font-semibold" style="color: #3D9991;">${formatCurrency(project.remainingBudget || project.totalBudget || 0)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress -->
+          <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Project Progress</h2>
+            <div class="mb-4">
+              <div class="flex justify-between mb-2">
+                <span class="text-gray-600">Overall Progress</span>
+                <span class="font-semibold text-gray-900">${project.progressPercentage || 0}%</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="h-3 rounded-full" style="width: ${project.progressPercentage || 0}%; background-color: #3D9991;"></div>
+              </div>
+            </div>
+            <div class="flex justify-between text-sm text-gray-600 mt-4">
+              <span>Milestones: ${project.completedMilestones || 0} / ${project.totalMilestones || 0}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column (1/3) -->
+        <div class="space-y-6">
+          <!-- Quick Actions -->
+          <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+            <div class="space-y-2">
+              <a href="/projects/${project.id}/forms" class="block w-full text-center text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-colors" style="background-color: #FF5E15;">
+                📝 Create Forms
+              </a>
+              <a href="/projects/${project.id}/documents" class="block w-full text-center bg-white border-2 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors" style="border-color: #3D9991;">
+                View Documents
+              </a>
+              <button onclick="alert('Edit functionality coming soon!')" class="w-full text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-colors" style="background-color: #4BAAD8;">
+                Edit Project
+              </button>
+              <button onclick="alert('Tasks functionality coming soon!')" class="w-full text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-colors" style="background-color: #3D9991;">
+                Manage Tasks
+              </button>
+            </div>
+          </div>
+
+          <!-- Project Info -->
+          <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Additional Info</h2>
+            <div class="space-y-3 text-sm">
+              <div>
+                <p class="text-gray-600 mb-1">Created</p>
+                <p class="font-medium text-gray-900">${formatDate(project.createdAt)}</p>
+              </div>
+              <div>
+                <p class="text-gray-600 mb-1">Last Updated</p>
+                <p class="font-medium text-gray-900">${formatDate(project.updatedAt)}</p>
+              </div>
+              ${project.tags && project.tags.length > 0 ? `
+                <div>
+                  <p class="text-gray-600 mb-2">Tags</p>
+                  <div class="flex flex-wrap gap-2">
+                    ${project.tags.map((tag: string) => `
+                      <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                        ${tag}
+                      </span>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderError(message: string, container: HTMLElement) {
+    container.innerHTML = `
+      <div class="bg-white rounded-lg shadow-md p-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">${message}</h3>
+        <p class="text-gray-600 mb-6">The project you're looking for could not be found.</p>
+        <a
+          href="/projects"
+          class="inline-flex items-center text-white px-6 py-2 rounded-lg font-medium transition-colors"
+          style="background-color: #3D9991;"
+        >
+          Back to Projects
+        </a>
+      </div>
+    `;
+  }
+</script>

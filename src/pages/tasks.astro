@@ -1,0 +1,46 @@
+---
+/**
+ * Tasks Page
+ * Full page view of all tasks with filtering and management capabilities
+ */
+import Layout from '../layouts/Layout.astro';
+import DashboardSidebar from '../components/dashboard/DashboardSidebar';
+import TasksManager from '../components/TasksManager';
+import { getMockSession } from '../lib/auth/mockAuth';
+
+// Get mock user for development (bypasses auth)
+const mockUser = getMockSession();
+const currentUser = {
+  id: mockUser?._id || 'temp-user-id',
+  name: `${mockUser?.firstName || 'John'} ${mockUser?.lastName || 'Smith'}`,
+  role: mockUser?.role || 'GC',
+  company: mockUser?.company || 'Construction LLC'
+};
+---
+
+<Layout title="Tasks - ConstructAid">
+  <div class="flex h-screen bg-background-light">
+    {/* Left Sidebar - Navigation */}
+    <aside class="w-64 bg-primary-dark text-white flex-shrink-0">
+      <DashboardSidebar client:load currentUser={currentUser} />
+    </aside>
+
+    {/* Main Content Area */}
+    <main class="flex-1 overflow-y-auto">
+      <div class="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-text-primary mb-2">
+            My Tasks
+          </h1>
+          <p class="text-text-secondary">
+            Manage and track all your tasks across projects
+          </p>
+        </div>
+
+        {/* Tasks Manager Component */}
+        <TasksManager client:load userId={currentUser.id} />
+      </div>
+    </main>
+  </div>
+</Layout>

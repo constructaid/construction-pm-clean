@@ -1,0 +1,43 @@
+---
+/**
+ * AI Chatbot Component (Standalone)
+ * Placeholder for AI assistant integration (OpenAI/Claude API ready)
+ * Styled to match ConstructAid.net color scheme
+ */
+
+interface Props {
+  projectId?: string;
+}
+
+const { projectId } = Astro.props;
+---
+
+<div id="chatbot-container" data-project-id={projectId}>
+  <!-- This will be hydrated by the ChatbotInteractive component -->
+  <div class="animate-pulse">
+    <div class="h-64 bg-gray-200 rounded mb-4"></div>
+    <div class="h-10 bg-gray-200 rounded"></div>
+  </div>
+</div>
+
+<script>
+  // This component will be hydrated by SolidJS on client side
+  import('./ChatbotInteractive').then(({ default: ChatbotInteractive }) => {
+    // Component will auto-mount via client:load directive
+  });
+</script>
+
+<style>
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style>

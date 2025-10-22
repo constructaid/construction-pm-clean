@@ -1,0 +1,66 @@
+---
+/**
+ * To-Do List Component (Standalone)
+ * Displays and manages tasks with auto-population from milestones
+ * Supports real-time updates via polling or WebSocket
+ */
+import CSIDropdown from './CSIDropdown.astro';
+
+interface Props {
+  projectId?: string;
+  userId: string;
+  showFilters?: boolean;
+  maxItems?: number;
+}
+
+const {
+  projectId,
+  userId,
+  showFilters = true,
+  maxItems = 20
+} = Astro.props;
+---
+
+<div id="todo-list-container" data-user-id={userId} data-project-id={projectId} data-max-items={maxItems}>
+  <!-- This will be hydrated by the TodoListInteractive component -->
+  <div class="animate-pulse">
+    <div class="h-10 bg-gray-200 rounded w-full mb-4"></div>
+    <div class="space-y-3">
+      <div class="h-16 bg-gray-200 rounded"></div>
+      <div class="h-16 bg-gray-200 rounded"></div>
+      <div class="h-16 bg-gray-200 rounded"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { TodoListInteractive } from './TodoListInteractive';
+
+  // Mount the interactive component
+  const container = document.getElementById('todo-list-container');
+  if (container) {
+    const userId = container.dataset.userId!;
+    const projectId = container.dataset.projectId;
+    const maxItems = parseInt(container.dataset.maxItems || '20');
+
+    // This will be handled by the SolidJS component
+    import('./TodoListInteractive').then(({ default: TodoListInteractive }) => {
+      // Component will auto-mount via client:load directive
+    });
+  }
+</script>
+
+<style>
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style>
