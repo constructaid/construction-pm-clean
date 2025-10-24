@@ -1,0 +1,130 @@
+[
+  {
+    "coNumber": "1",
+    "description": "PCO #1 REPLACEMENT WATER VALVE & FIRE RISER",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": 2847.75,
+    "comments": "PER DISD"
+  },
+  {
+    "coNumber": "2",
+    "description": "PCO #2  SANITARY SEWER AT CRAWLSPACE",
+    "dateInitiated": 45888,
+    "proposedAmount": 39515.29,
+    "approvedAmount": "",
+    "comments": "Submitted"
+  },
+  {
+    "coNumber": "3",
+    "description": "PCO #3 1\"X1\" TILE AT DOOR FILL IN PATCHES",
+    "dateInitiated": 45870,
+    "proposedAmount": "",
+    "approvedAmount": 3289,
+    "comments": "Submitted"
+  },
+  {
+    "coNumber": "4",
+    "description": "PCO # 4 - Sanitary Sewer at Crawlspace not in plans",
+    "dateInitiated": "",
+    "proposedAmount": 93000,
+    "approvedAmount": "",
+    "comments": "Pending meeting"
+  },
+  {
+    "coNumber": "5",
+    "description": "PCO # 5 -ASI #1 Corridor Drop Ceiling",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": "waiting on pricing"
+  },
+  {
+    "coNumber": "6",
+    "description": "PCO #6 RFI # 6 Canopy Roof",
+    "dateInitiated": "",
+    "proposedAmount": 37395,
+    "approvedAmount": " ",
+    "comments": "Place holder only - roofing number in, waiting on framing"
+  },
+  {
+    "coNumber": "7",
+    "description": "PCO # 7 Curtain Wall Quaties Increas",
+    "dateInitiated": 45888,
+    "proposedAmount": 75010.68,
+    "approvedAmount": "",
+    "comments": "Submitted"
+  },
+  {
+    "coNumber": "8",
+    "description": "PCO # 8 ASI # 2 PRINCIPAL OFFICE EXPANSION",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": "CEILING GRID, DUCTWORK AND LIGHTING"
+  },
+  {
+    "coNumber": "9",
+    "description": "PCO #9 - RFI #13 WALL THICKNESS",
+    "dateInitiated": "",
+    "proposedAmount": 10000,
+    "approvedAmount": "",
+    "comments": "PLACE HOLDERFURRED WALLS IN ADMIN AND PRINCIPAL OFFICE"
+  },
+  {
+    "coNumber": "10",
+    "description": "",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": ""
+  },
+  {
+    "coNumber": "11",
+    "description": "",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": ""
+  },
+  {
+    "coNumber": "1",
+    "description": "sample",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": ""
+  },
+  {
+    "coNumber": "2",
+    "description": "",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": ""
+  },
+  {
+    "coNumber": "3",
+    "description": "",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": ""
+  },
+  {
+    "coNumber": "4",
+    "description": "",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": ""
+  },
+  {
+    "coNumber": "5",
+    "description": "",
+    "dateInitiated": "",
+    "proposedAmount": "",
+    "approvedAmount": "",
+    "comments": ""
+  }
+]

@@ -1,0 +1,39 @@
+---
+/**
+ * Contracts Page
+ * Manage subcontract agreements, lien waivers, and contract documents
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+---
+
+<Layout title="Contracts - ConstructAid">
+  <ProjectModuleNav projectId={id!} client:load />
+  <ProjectHeader client:load projectId={id!} moduleName="Contracts" moduleIcon="📜" />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-50 ml-64">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Contract Manager Container -->
+      <div id="contract-manager"></div>
+    </div>
+  </div>
+
+  <script>
+    import { render } from 'solid-js/web';
+    import ContractManager from '../../../components/ContractManager';
+
+    const container = document.getElementById('contract-manager');
+    if (container) {
+      const pathParts = window.location.pathname.split('/');
+      const projectId = parseInt(pathParts[2]);
+
+      render(() => ContractManager({ projectId }), container);
+    }
+  </script>
+</Layout>

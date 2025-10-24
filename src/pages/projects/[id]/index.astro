@@ -4,7 +4,6 @@
  * Shows detailed view of a specific project with all its information
  */
 import Layout from '../../../layouts/Layout.astro';
-import { Navbar } from '../../../components/Navbar.tsx';
 import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
 
 export const prerender = false;
@@ -17,26 +16,68 @@ const { id } = Astro.params;
 ---
 
 <Layout title="Project Dashboard - ConstructAid">
-  <Navbar client:load />
 
-  <!-- Horizontal Module Navigation -->
+  <!-- Left Sidebar Navigation -->
   <ProjectModuleNav client:load projectId={id!} />
 
-  <div class="min-h-screen bg-gray-50">
-    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <!-- Back button -->
-      <div class="mb-6">
-        <a
-          href="/projects"
-          class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          Back to Projects
-        </a>
-      </div>
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-50 ml-64">
+    <!-- Top Bar with Project Selector -->
+    <div class="bg-white border-b border-gray-200 shadow-sm sticky top-16 z-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div class="flex items-center justify-between">
+          <!-- Project Dropdown -->
+          <div class="relative" id="project-selector-container">
+            <button
+              id="project-dropdown-button"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-gray-400 transition-colors font-medium text-gray-900"
+            >
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+              <span id="current-project-name">Loading...</span>
+              <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
 
+            <!-- Dropdown Menu (Hidden by default) -->
+            <div
+              id="project-dropdown-menu"
+              class="hidden absolute left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-y-auto z-30"
+            >
+              <div class="p-2">
+                <input
+                  type="text"
+                  id="project-search"
+                  placeholder="Search projects..."
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div id="project-list" class="py-1">
+                <div class="px-4 py-8 text-center text-gray-500">
+                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+                  Loading projects...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back button -->
+          <a
+            href="/projects"
+            class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Projects
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       <!-- Project Dashboard Content -->
       <div id="project-dashboard" data-project-id={id}>
         <div class="text-center py-12">
@@ -53,12 +94,118 @@ const { id } = Astro.params;
   const dashboardElement = document.getElementById('project-dashboard');
   const projectId = dashboardElement?.getAttribute('data-project-id');
 
+  // Project dropdown functionality
+  let allProjects: any[] = [];
+
+  function initProjectDropdown() {
+    const dropdownButton = document.getElementById('project-dropdown-button');
+    const dropdownMenu = document.getElementById('project-dropdown-menu');
+    const searchInput = document.getElementById('project-search') as HTMLInputElement;
+
+    // Toggle dropdown
+    dropdownButton?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu?.classList.toggle('hidden');
+      if (!dropdownMenu?.classList.contains('hidden')) {
+        loadProjects();
+        searchInput?.focus();
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const container = document.getElementById('project-selector-container');
+      if (container && !container.contains(e.target as Node)) {
+        dropdownMenu?.classList.add('hidden');
+      }
+    });
+
+    // Search functionality
+    searchInput?.addEventListener('input', (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value.toLowerCase();
+      filterProjects(searchTerm);
+    });
+  }
+
+  function loadProjects() {
+    fetch('/api/projects?userId=1')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.projects) {
+          allProjects = data.projects;
+          renderProjectList(allProjects);
+        }
+      })
+      .catch(error => {
+        console.error('Error loading projects:', error);
+        const projectList = document.getElementById('project-list');
+        if (projectList) {
+          projectList.innerHTML = '<div class="px-4 py-3 text-red-600 text-sm">Failed to load projects</div>';
+        }
+      });
+  }
+
+  function renderProjectList(projects: any[]) {
+    const projectList = document.getElementById('project-list');
+    if (!projectList) return;
+
+    if (projects.length === 0) {
+      projectList.innerHTML = '<div class="px-4 py-3 text-gray-500 text-sm">No projects found</div>';
+      return;
+    }
+
+    projectList.innerHTML = projects.map(project => {
+      const isActive = project.id === parseInt(projectId || '0');
+      const statusColor = getStatusColor(project.status);
+
+      return `
+        <a
+          href="/projects/${project.id}"
+          class="block px-4 py-3 hover:bg-gray-50 transition-colors ${isActive ? 'bg-blue-50' : ''}"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <p class="font-medium text-gray-900 truncate">${project.name}</p>
+                ${isActive ? '<span class="text-xs text-blue-600 font-medium">Current</span>' : ''}
+              </div>
+              <p class="text-xs text-gray-500">${project.projectNumber}</p>
+            </div>
+            <span class="ml-2 px-2 py-1 rounded text-xs font-medium" style="background-color: ${statusColor}20; color: ${statusColor};">
+              ${project.status.replace('_', ' ')}
+            </span>
+          </div>
+        </a>
+      `;
+    }).join('');
+  }
+
+  function filterProjects(searchTerm: string) {
+    const filtered = allProjects.filter(project =>
+      project.name.toLowerCase().includes(searchTerm) ||
+      project.projectNumber.toLowerCase().includes(searchTerm) ||
+      project.description?.toLowerCase().includes(searchTerm)
+    );
+    renderProjectList(filtered);
+  }
+
+  // Initialize dropdown
+  initProjectDropdown();
+
   if (projectId && dashboardElement) {
     fetch(`/api/projects/${projectId}`)
       .then(response => response.json())
       .then(data => {
         if (data.success && data.project) {
+          // Store project data globally
+          currentProjectData = data.project;
+
           renderProjectDashboard(data.project, dashboardElement);
+          // Update dropdown button with current project name
+          const projectNameEl = document.getElementById('current-project-name');
+          if (projectNameEl) {
+            projectNameEl.textContent = data.project.name;
+          }
         } else {
           renderError('Project not found', dashboardElement);
         }
@@ -105,9 +252,20 @@ const { id } = Astro.params;
             <h1 class="text-3xl font-bold text-gray-900 mb-2">${project.name}</h1>
             <p class="text-gray-600">${project.description || 'No description provided'}</p>
           </div>
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ml-4" style="background-color: ${statusColor}; color: ${textColor};">
-            ${project.status.replace('_', ' ').toUpperCase()}
-          </span>
+          <div class="flex items-center gap-3">
+            <button
+              onclick="openProjectInfoModal()"
+              class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+              style="background-color: #4BAAD8;"
+              title="Edit Project Information"
+            >
+              <span class="mr-2">✏️</span>
+              Edit Info
+            </button>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium" style="background-color: ${statusColor}; color: ${textColor};">
+              ${project.status.replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -126,6 +284,111 @@ const { id } = Astro.params;
           <div class="bg-gray-50 rounded-lg p-4">
             <p class="text-sm text-gray-600 mb-1">Est. Completion</p>
             <p class="text-lg font-semibold text-gray-900">${formatDate(project.estimatedCompletion)}</p>
+          </div>
+        </div>
+
+        <!-- Project Team Contacts Section -->
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Project Team Contacts</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <button
+              onclick="openContactsModal('client')"
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+              style="background-color: #2D3748;"
+            >
+              <span>👥</span>
+              <span>Client Team</span>
+            </button>
+            <button
+              onclick="openContactsModal('design')"
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+              style="background-color: #4A5568;"
+            >
+              <span>📐</span>
+              <span>Design Team</span>
+            </button>
+            <button
+              onclick="openContactsModal('gc')"
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+              style="background-color: #1A365D;"
+            >
+              <span>🏗️</span>
+              <span>GC Team</span>
+            </button>
+            <button
+              onclick="openContactsModal('subcontractors')"
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+              style="background-color: #FF5E15;"
+            >
+              <span>🔧</span>
+              <span>Subcontractors</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Status Panels -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Recent Activity & Status Updates</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- RFI Status -->
+          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #4A5568;">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-semibold text-gray-900">📋 RFIs</h3>
+              <span class="text-2xl font-bold" style="color: #4A5568;">3</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">2 pending responses</p>
+            <div class="text-xs text-gray-500">Last updated: 2 hours ago</div>
+          </div>
+
+          <!-- Submittal Status -->
+          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #2D3748;">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-semibold text-gray-900">📦 Submittals</h3>
+              <span class="text-2xl font-bold" style="color: #2D3748;">5</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">1 requires review</p>
+            <div class="text-xs text-gray-500">Last updated: 1 day ago</div>
+          </div>
+
+          <!-- Change Orders Status -->
+          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #FF5E15;">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-semibold text-gray-900">📝 Change Orders</h3>
+              <span class="text-2xl font-bold" style="color: #FF5E15;">2</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">All approved</p>
+            <div class="text-xs text-gray-500">Last updated: 3 days ago</div>
+          </div>
+
+          <!-- Schedule Status -->
+          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #3D9991;">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-semibold text-gray-900">📅 Schedule</h3>
+              <span class="text-2xl font-bold" style="color: #3D9991;">On Track</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">Next milestone in 5 days</p>
+            <div class="text-xs text-gray-500">Last updated: Today</div>
+          </div>
+
+          <!-- Payment Apps Status -->
+          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #1A365D;">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-semibold text-gray-900">💰 Pay Apps</h3>
+              <span class="text-2xl font-bold" style="color: #1A365D;">1</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">In review</p>
+            <div class="text-xs text-gray-500">Last updated: 4 hours ago</div>
+          </div>
+
+          <!-- Safety Status -->
+          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #FF5E15;">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-semibold text-gray-900">🦺 Safety</h3>
+              <span class="text-2xl font-bold" style="color: #FF5E15;">0</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">No incidents reported</p>
+            <div class="text-xs text-gray-500">Last updated: Today</div>
           </div>
         </div>
       </div>
@@ -188,31 +451,9 @@ const { id } = Astro.params;
 
         <!-- Right Column (1/3) -->
         <div class="space-y-6">
-          <!-- Quick Actions -->
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-            <div class="space-y-2">
-              <a href="/projects/${project.id}/forms" class="block w-full text-center text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-colors" style="background-color: #FF5E15;">
-                📝 Create Forms
-              </a>
-              <a href="/projects/${project.id}/payment-applications" class="block w-full text-center text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-colors" style="background-color: #10B981;">
-                💰 Payment Applications
-              </a>
-              <a href="/projects/${project.id}/documents" class="block w-full text-center bg-white border-2 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors" style="border-color: #3D9991;">
-                View Documents
-              </a>
-              <button onclick="alert('Edit functionality coming soon!')" class="w-full text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-colors" style="background-color: #4BAAD8;">
-                Edit Project
-              </button>
-              <button onclick="alert('Tasks functionality coming soon!')" class="w-full text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-colors" style="background-color: #3D9991;">
-                Manage Tasks
-              </button>
-            </div>
-          </div>
-
           <!-- Project Info -->
           <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Additional Info</h2>
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Project Info</h2>
             <div class="space-y-3 text-sm">
               <div>
                 <p class="text-gray-600 mb-1">Created</p>
@@ -259,4 +500,254 @@ const { id } = Astro.params;
       </div>
     `;
   }
+
+  // Store current project data globally
+  let currentProjectData: any = null;
+
+  // Modal Functions
+  function openProjectInfoModal() {
+    if (!currentProjectData) {
+      alert('Project data not loaded yet. Please wait.');
+      return;
+    }
+
+    // Format dates for input fields
+    const formatDateForInput = (dateString: string) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    };
+
+    // Create modal backdrop
+    const modal = document.createElement('div');
+    modal.id = 'project-info-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-bold text-gray-900">Edit Project Information</h2>
+          <button onclick="closeModal('project-info-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Project Name *</label>
+                <input type="text" id="edit-project-name" value="${currentProjectData.name || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter project name">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Project Number *</label>
+                <input type="text" id="edit-project-number" value="${currentProjectData.projectNumber || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter project number">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea id="edit-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Enter description">${currentProjectData.description || ''}</textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select id="edit-status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                  <option value="planning" ${currentProjectData.status === 'planning' ? 'selected' : ''}>Planning</option>
+                  <option value="in_progress" ${currentProjectData.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                  <option value="on_hold" ${currentProjectData.status === 'on_hold' ? 'selected' : ''}>On Hold</option>
+                  <option value="completed" ${currentProjectData.status === 'completed' ? 'selected' : ''}>Completed</option>
+                  <option value="cancelled" ${currentProjectData.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Total Budget</label>
+                <input type="number" id="edit-budget" value="${currentProjectData.totalBudget || 0}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="0">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input type="date" id="edit-start-date" value="${formatDateForInput(currentProjectData.startDate)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Est. Completion</label>
+                <input type="date" id="edit-completion-date" value="${formatDateForInput(currentProjectData.estimatedCompletion)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input type="text" id="edit-address" value="${currentProjectData.address || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter address">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input type="text" id="edit-city" value="${currentProjectData.city || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter city">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                <input type="text" id="edit-state" value="${currentProjectData.state || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter state">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                <input type="text" id="edit-zip" value="${currentProjectData.zipCode || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter zip code">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sticky bottom-0 bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+          <button onclick="closeModal('project-info-modal')" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Cancel
+          </button>
+          <button onclick="saveProjectInfo()" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #4BAAD8;">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function openContactsModal(team: string) {
+    const teamNames = {
+      client: 'Client Team',
+      design: 'Design Team',
+      gc: 'GC Team',
+      subcontractors: 'Subcontractors'
+    };
+
+    const modal = document.createElement('div');
+    modal.id = 'contacts-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-bold text-gray-900">${teamNames[team]} Contacts</h2>
+          <button onclick="closeModal('contacts-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <p class="text-gray-600">Manage contacts for ${teamNames[team]}</p>
+            <button onclick="addContact('${team}')" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #FF5E15;">
+              + Add Contact
+            </button>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-semibold text-gray-900">John Doe</h3>
+                  <p class="text-sm text-gray-600">Project Manager</p>
+                  <p class="text-sm text-gray-600 mt-1">📧 john.doe@example.com</p>
+                  <p class="text-sm text-gray-600">📱 (555) 123-4567</p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-semibold text-gray-900">Jane Smith</h3>
+                  <p class="text-sm text-gray-600">Superintendent</p>
+                  <p class="text-sm text-gray-600 mt-1">📧 jane.smith@example.com</p>
+                  <p class="text-sm text-gray-600">📱 (555) 987-6543</p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function closeModal(modalId: string) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  async function saveProjectInfo() {
+    if (!currentProjectData) return;
+
+    // Get form values
+    const updatedData = {
+      name: (document.getElementById('edit-project-name') as HTMLInputElement)?.value,
+      projectNumber: (document.getElementById('edit-project-number') as HTMLInputElement)?.value,
+      description: (document.getElementById('edit-description') as HTMLTextAreaElement)?.value,
+      status: (document.getElementById('edit-status') as HTMLSelectElement)?.value,
+      totalBudget: parseFloat((document.getElementById('edit-budget') as HTMLInputElement)?.value) || 0,
+      startDate: (document.getElementById('edit-start-date') as HTMLInputElement)?.value,
+      estimatedCompletion: (document.getElementById('edit-completion-date') as HTMLInputElement)?.value,
+      address: (document.getElementById('edit-address') as HTMLInputElement)?.value,
+      city: (document.getElementById('edit-city') as HTMLInputElement)?.value,
+      state: (document.getElementById('edit-state') as HTMLInputElement)?.value,
+      zipCode: (document.getElementById('edit-zip') as HTMLInputElement)?.value,
+    };
+
+    // Validate required fields
+    if (!updatedData.name || !updatedData.projectNumber) {
+      alert('Project Name and Project Number are required.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${currentProjectData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update the stored project data
+        currentProjectData = { ...currentProjectData, ...updatedData };
+
+        // Close modal
+        closeModal('project-info-modal');
+
+        // Reload the page to show updated data
+        window.location.reload();
+      } else {
+        alert('Failed to save project information: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving project:', error);
+      alert('Failed to save project information. Please try again.');
+    }
+  }
+
+  function addContact(team: string) {
+    alert(`Add contact for ${team} team functionality will be implemented.`);
+  }
+
+  // Make functions available globally
+  (window as any).openProjectInfoModal = openProjectInfoModal;
+  (window as any).openContactsModal = openContactsModal;
+  (window as any).closeModal = closeModal;
+  (window as any).saveProjectInfo = saveProjectInfo;
+  (window as any).addContact = addContact;
 </script>

@@ -4,7 +4,8 @@
  * Upload, browse, and manage all project files
  */
 import Layout from '../../../layouts/Layout.astro';
-import { Navbar } from '../../../components/Navbar.tsx';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
 import FileUploader from '../../../components/FileUploader.tsx';
 import FileBrowser from '../../../components/FileBrowser.tsx';
 import ActivityLogViewer from '../../../components/ActivityLogViewer.tsx';
@@ -15,23 +16,12 @@ const { id } = Astro.params;
 ---
 
 <Layout title="File Management - ConstructAid">
-  <Navbar client:load />
+  <ProjectModuleNav projectId={id!} client:load />
+  <ProjectHeader client:load projectId={id!} moduleName="Files" moduleIcon="💾" />
 
-  <div class="min-h-screen bg-gray-50">
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-50 ml-64">
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <!-- Back button -->
-      <div class="mb-6">
-        <a
-          href={`/projects/${id}`}
-          class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          Back to Project Dashboard
-        </a>
-      </div>
-
       <!-- Page Header -->}
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 mb-2">File Management</h1>

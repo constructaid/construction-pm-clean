@@ -11,9 +11,22 @@ interface ChangeOrder {
   title: string;
   description: string;
   reason: string;
+
+  // Contract tracking
+  baseContractAmount: number;
+  clientContingency: number;
+  contingencyUsed: number;
+  contingencyRemaining: number;
+
+  // Proposed vs Approved
+  proposedAmount: number;
+  approvedAmount: number;
+
+  // Legacy fields
   costImpact: number;
   originalCost: number;
   revisedCost: number;
+
   scheduleImpactDays: number;
   status: 'proposed' | 'approved' | 'rejected' | 'executed';
   initiatedBy: number;
@@ -237,7 +250,16 @@ export default function ChangeOrderLog(props: ChangeOrderLogProps) {
                     Status
                   </th>
                   <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cost Impact
+                    Base Contract
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contingency
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Proposed
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Approved
                   </th>
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Schedule Impact (Days)
@@ -261,7 +283,7 @@ export default function ChangeOrderLog(props: ChangeOrderLogProps) {
                   when={filteredChangeOrders().length > 0}
                   fallback={
                     <tr>
-                      <td colspan="9" class="px-6 py-12 text-center text-gray-500">
+                      <td colspan="12" class="px-6 py-12 text-center text-gray-500">
                         <div class="flex flex-col items-center">
                           <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -304,8 +326,20 @@ export default function ChangeOrderLog(props: ChangeOrderLogProps) {
                             {co.status}
                           </span>
                         </td>
-                        <td class={`px-4 py-3 whitespace-nowrap text-sm text-right font-semibold ${co.costImpact >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {formatCurrency(co.costImpact)}
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                          {formatCurrency(co.baseContractAmount || 0)}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                          <div class="font-medium">{formatCurrency(co.clientContingency || 0)}</div>
+                          <div class="text-xs text-gray-500">
+                            {formatCurrency(co.contingencyRemaining || 0)} remaining
+                          </div>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-blue-600">
+                          {formatCurrency(co.proposedAmount || 0)}
+                        </td>
+                        <td class={`px-4 py-3 whitespace-nowrap text-sm text-right font-semibold ${co.approvedAmount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                          {co.approvedAmount > 0 ? formatCurrency(co.approvedAmount) : '—'}
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
                           {co.scheduleImpactDays > 0 ? `+${co.scheduleImpactDays}` : co.scheduleImpactDays || '0'}

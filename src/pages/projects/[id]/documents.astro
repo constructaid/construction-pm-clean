@@ -5,7 +5,11 @@
  * Route: /projects/[id]/documents
  */
 import Layout from '../../../layouts/Layout.astro';
-import DocumentFolders from '../../../components/DocumentFolders';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
+import ProjectFolderBrowser from '../../../components/ProjectFolderBrowser';
+
+export const prerender = false;
 
 // Get project ID from URL params
 const { id } = Astro.params;
@@ -19,21 +23,14 @@ const project = {
 ---
 
 <Layout title={`Documents - ${project.name} - ConstructAid`}>
-  <div class="min-h-screen bg-background-light">
+  <ProjectModuleNav projectId={id!} client:load />
+  <ProjectHeader client:load projectId={id!} moduleName="Documents" moduleIcon="📁" />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-background-light ml-64">
     {/* Header */}
     <div class="bg-white border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-6 py-4">
-        {/* Breadcrumb */}
-        <nav class="flex items-center space-x-2 text-sm text-text-secondary mb-4">
-          <a href="/dashboard/general-contractor" class="hover:text-primary-orange">Dashboard</a>
-          <span>›</span>
-          <a href="/projects" class="hover:text-primary-orange">Projects</a>
-          <span>›</span>
-          <a href={`/projects/${id}`} class="hover:text-primary-orange">{project.name}</a>
-          <span>›</span>
-          <span class="text-text-primary">Documents</span>
-        </nav>
-
         {/* Page Title */}
         <div class="flex items-center justify-between">
           <div>
@@ -98,8 +95,10 @@ const project = {
         </a>
       </div>
 
-      {/* Document Folders Component */}
-      <DocumentFolders client:load projectId={id} />
+      {/* Project Folder Browser Component */}
+      <div class="bg-white rounded-lg border border-gray-200 shadow-ca-sm" style="height: calc(100vh - 400px); min-height: 600px;">
+        <ProjectFolderBrowser client:load projectId={parseInt(id!)} />
+      </div>
 
       {/* Info Banner */}
       <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">

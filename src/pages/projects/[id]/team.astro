@@ -1,0 +1,62 @@
+---
+/**
+ * Project Team Page
+ * Manage project team members and their contact information
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
+import ProjectTeam from '../../../components/ProjectTeam.tsx';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/projects');
+}
+
+const projectId = parseInt(id);
+
+// Fetch project details
+let project = null;
+try {
+  const response = await fetch(`${Astro.url.origin}/api/projects/${id}`);
+  if (response.ok) {
+    const data = await response.json();
+    project = data.project || data;
+  }
+} catch (error) {
+  console.error('Error fetching project:', error);
+}
+
+if (!project) {
+  return Astro.redirect('/projects');
+}
+---
+
+<Layout title={`Project Team - ${project.name}`}>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Project Header -->
+    <ProjectHeader projectId={id} moduleName="Project Team" moduleIcon="👥" client:load />
+
+    <!-- Module Navigation -->
+    <ProjectModuleNav projectId={id} activeModule="team" client:load />
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8 ml-64">
+      <!-- Page Header -->
+      <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Project Team</h1>
+        <p class="mt-2 text-gray-600">
+          Manage project team members including owners, architects, engineers, GC, and superintendents with their contact information.
+        </p>
+      </div>
+
+      <!-- Project Team Component -->
+      <ProjectTeam projectId={projectId} client:load />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* Add any custom styles here */
+</style>

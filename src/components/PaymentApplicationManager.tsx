@@ -5,6 +5,7 @@
 import { createSignal, Show, For, onMount, createEffect } from 'solid-js';
 import PaymentApplicationG702 from './PaymentApplicationG702';
 import PaymentApplicationG703 from './PaymentApplicationG703';
+import PaymentApplicationXRPL from './PaymentApplicationXRPL';
 
 interface PaymentApplicationManagerProps {
   projectId: number;
@@ -15,7 +16,7 @@ export default function PaymentApplicationManager(props: PaymentApplicationManag
   const [selectedPayApp, setSelectedPayApp] = createSignal<any | null>(null);
   const [lineItems, setLineItems] = createSignal<any[]>([]);
   const [view, setView] = createSignal<'list' | 'create' | 'detail'>('list');
-  const [activeTab, setActiveTab] = createSignal<'g702' | 'g703'>('g702');
+  const [activeTab, setActiveTab] = createSignal<'g702' | 'g703' | 'xrpl'>('g702');
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
@@ -149,28 +150,92 @@ export default function PaymentApplicationManager(props: PaymentApplicationManag
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  const getCurrentMonth = () => {
+    return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const calculateTotalBilled = () => {
+    return paymentApplications().reduce((sum, app) => sum + (app.currentPaymentDue || 0), 0);
+  };
+
+  const getMonthFromPeriod = (periodTo: string) => {
+    return new Date(periodTo).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+
   return (
     <div>
       {/* List View */}
       <Show when={view() === 'list'}>
         <div>
-          {/* Header with Create Button */}
-          <div class="flex justify-between items-center mb-6">
-            <div>
-              <h2 class="text-xl font-semibold text-gray-900">All Payment Applications</h2>
-              <p class="text-sm text-gray-600 mt-1">
-                {paymentApplications().length} application(s)
-              </p>
+          {/* Hero Section - New Month Billing Application */}
+          <div class="bg-gradient-to-r from-ca-teal to-blue-600 rounded-lg shadow-xl p-8 mb-8">
+            <div class="flex items-center justify-between">
+              <div class="text-white">
+                <h1 class="text-3xl font-bold mb-2">Payment Applications (G702/G703)</h1>
+                <p class="text-blue-100 text-lg mb-4">
+                  Monthly billing applications for {getCurrentMonth()}
+                </p>
+                <div class="flex items-center gap-6 text-sm">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span>{paymentApplications().length} Applications</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>{formatCurrency(calculateTotalBilled())} Total Billed</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleCreateNew}
+                class="px-8 py-4 bg-white text-ca-teal rounded-lg hover:bg-gray-100 transition-all shadow-lg font-bold text-lg flex items-center gap-3"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Month Billing Application
+              </button>
             </div>
-            <button
-              onClick={handleCreateNew}
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              New Payment Application
-            </button>
+          </div>
+
+          {/* Summary Stats Cards */}
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+              <div class="text-sm text-gray-600">Approved</div>
+              <div class="text-2xl font-bold text-gray-900">
+                {paymentApplications().filter(app => app.status === 'approved').length}
+              </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-yellow-500">
+              <div class="text-sm text-gray-600">Under Review</div>
+              <div class="text-2xl font-bold text-gray-900">
+                {paymentApplications().filter(app => app.status === 'under_review').length}
+              </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+              <div class="text-sm text-gray-600">Paid</div>
+              <div class="text-2xl font-bold text-gray-900">
+                {paymentApplications().filter(app => app.status === 'paid').length}
+              </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-gray-500">
+              <div class="text-sm text-gray-600">Draft</div>
+              <div class="text-2xl font-bold text-gray-900">
+                {paymentApplications().filter(app => app.status === 'draft').length}
+              </div>
+            </div>
+          </div>
+
+          {/* Section Header */}
+          <div class="mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">Previous Months Summary</h2>
+            <p class="text-sm text-gray-600 mt-1">
+              View and manage all payment applications by month
+            </p>
           </div>
 
           {/* Loading State */}
@@ -188,94 +253,123 @@ export default function PaymentApplicationManager(props: PaymentApplicationManag
             </div>
           </Show>
 
-          {/* Payment Applications Table */}
+          {/* Payment Applications - Monthly Card View */}
           <Show when={!isLoading() && !error()}>
-            <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Application #
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Period
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount Due
-                    </th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contract Sum
-                    </th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  <Show
-                    when={paymentApplications().length > 0}
-                    fallback={
-                      <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                          <div class="flex flex-col items-center">
-                            <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <p class="text-lg font-medium text-gray-900 mb-1">
-                              No payment applications yet
-                            </p>
-                            <p class="text-sm text-gray-500 mb-4">
-                              Get started by creating your first payment application
-                            </p>
-                            <button
-                              onClick={handleCreateNew}
-                              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                            >
-                              Create Payment Application
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    }
+            <Show
+              when={paymentApplications().length > 0}
+              fallback={
+                <div class="bg-white rounded-lg shadow-md p-12 text-center">
+                  <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p class="text-xl font-semibold text-gray-900 mb-2">
+                    No payment applications yet
+                  </p>
+                  <p class="text-gray-600 mb-6">
+                    Get started by creating your first monthly billing application
+                  </p>
+                  <button
+                    onClick={handleCreateNew}
+                    class="px-6 py-3 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all shadow-md font-medium inline-flex items-center gap-2"
                   >
-                    <For each={paymentApplications()}>
-                      {(payApp) => (
-                        <tr class="hover:bg-gray-50">
-                          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            #{payApp.applicationNumber}
-                          </td>
-                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {formatDate(payApp.periodTo)}
-                          </td>
-                          <td class="px-6 py-4 whitespace-nowrap">
-                            <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(payApp.status)}`}>
-                              {payApp.status}
-                            </span>
-                          </td>
-                          <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                            {formatCurrency(payApp.currentPaymentDue)}
-                          </td>
-                          <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
-                            {formatCurrency(payApp.contractSumToDate)}
-                          </td>
-                          <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create First Application
+                  </button>
+                </div>
+              }
+            >
+              <div class="space-y-4">
+                <For each={paymentApplications()}>
+                  {(payApp) => (
+                    <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 overflow-hidden">
+                      <div class="p-6">
+                        <div class="flex items-center justify-between">
+                          {/* Left: Application Info */}
+                          <div class="flex-1">
+                            <div class="flex items-center gap-4 mb-3">
+                              <div class="text-3xl font-bold text-gray-900">
+                                #{payApp.applicationNumber}
+                              </div>
+                              <div>
+                                <div class="text-lg font-semibold text-gray-900">
+                                  {getMonthFromPeriod(payApp.periodTo)}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                  Period ending {formatDate(payApp.periodTo)}
+                                </div>
+                              </div>
+                              <span class={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(payApp.status)}`}>
+                                {payApp.status.replace('_', ' ').toUpperCase()}
+                              </span>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-6 mt-4">
+                              <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Contract Sum to Date</div>
+                                <div class="text-lg font-semibold text-gray-900">
+                                  {formatCurrency(payApp.contractSumToDate)}
+                                </div>
+                              </div>
+                              <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Work Completed</div>
+                                <div class="text-lg font-semibold text-blue-600">
+                                  {formatCurrency(payApp.totalCompletedAndStored)}
+                                </div>
+                              </div>
+                              <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Current Payment Due</div>
+                                <div class="text-xl font-bold text-green-600">
+                                  {formatCurrency(payApp.currentPaymentDue)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Actions */}
+                          <div class="ml-6 flex flex-col gap-3">
                             <button
                               onClick={() => loadPaymentApplicationDetail(payApp.id)}
-                              class="text-blue-600 hover:text-blue-800 font-medium"
+                              class="px-6 py-3 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all shadow-md font-medium whitespace-nowrap flex items-center gap-2"
                             >
-                              View
+                              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                              </svg>
+                              View Details
                             </button>
-                          </td>
-                        </tr>
-                      )}
-                    </For>
-                  </Show>
-                </tbody>
-              </table>
-            </div>
+                            <Show when={payApp.status === 'approved' && !payApp.xrpTransactionHash}>
+                              <button
+                                onClick={() => {
+                                  setSelectedPayApp(payApp);
+                                  setView('detail');
+                                  setActiveTab('xrpl');
+                                }}
+                                class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:opacity-90 transition-all shadow-md font-medium whitespace-nowrap flex items-center gap-2"
+                              >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Pay via XRPL
+                              </button>
+                            </Show>
+                            <Show when={payApp.xrpTransactionHash}>
+                              <div class="px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-center">
+                                <div class="text-xs text-green-700 font-semibold">PAID VIA BLOCKCHAIN</div>
+                                <div class="text-xs text-green-600 font-mono mt-1">
+                                  {payApp.xrpTransactionHash?.substring(0, 12)}...
+                                </div>
+                              </div>
+                            </Show>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </Show>
         </div>
       </Show>
@@ -309,7 +403,7 @@ export default function PaymentApplicationManager(props: PaymentApplicationManag
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                G702 - Application for Payment
+                📄 G702 - Application for Payment
               </button>
               <button
                 onClick={() => setActiveTab('g703')}
@@ -319,7 +413,18 @@ export default function PaymentApplicationManager(props: PaymentApplicationManag
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                G703 - Continuation Sheet
+                📋 G703 - Continuation Sheet
+              </button>
+              <button
+                onClick={() => setActiveTab('xrpl')}
+                class={`pb-4 px-1 border-b-2 font-medium text-sm transition flex items-center gap-2 ${
+                  activeTab() === 'xrpl'
+                    ? 'border-purple-600 text-purple-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                ⚡ Blockchain Payment (XRPL)
+                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">New</span>
               </button>
             </nav>
           </div>
@@ -343,6 +448,30 @@ export default function PaymentApplicationManager(props: PaymentApplicationManag
               projectId={props.projectId}
               onUpdate={handleUpdateLineItems}
               readOnly={selectedPayApp()?.status === 'approved' || selectedPayApp()?.status === 'paid'}
+            />
+          </Show>
+
+          {/* XRPL Blockchain Payment Tab */}
+          <Show when={activeTab() === 'xrpl'}>
+            <PaymentApplicationXRPL
+              paymentApp={selectedPayApp()}
+              projectId={props.projectId}
+              onPaymentComplete={async (txHash) => {
+                console.log('Payment completed with hash:', txHash);
+                // Update payment app status to 'paid'
+                if (selectedPayApp()?.id) {
+                  await fetch(`/api/payment-applications?id=${selectedPayApp().id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      ...selectedPayApp(),
+                      status: 'paid',
+                      xrpTransactionHash: txHash,
+                    }),
+                  });
+                  await loadPaymentApplications();
+                }
+              }}
             />
           </Show>
         </div>

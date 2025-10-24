@@ -21,10 +21,15 @@ export function Hero() {
       <div class="relative max-w-7xl mx-auto py-16 px-6 sm:py-24 lg:py-28">
         <div class="text-center">
           {/* Main Heading */}
-          <h1 class="text-4xl font-bold text-white sm:text-5xl lg:text-6xl tracking-tight">
+          <h1 class="text-4xl font-heading font-light text-white sm:text-5xl lg:text-6xl tracking-tight">
             <span class="block">Modern Construction</span>
             <span class="block mt-2 text-ca-orange">Project Management</span>
           </h1>
+
+          {/* Tagline */}
+          <p class="mt-4 text-2xl text-ca-orange font-heading font-light tracking-wide uppercase">
+            Concept to Completion
+          </p>
 
           {/* Subheading */}
           <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-300 leading-relaxed">

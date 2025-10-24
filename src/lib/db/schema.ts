@@ -155,7 +155,17 @@ export const changeOrders = pgTable('change_orders', {
   description: text('description').notNull(),
   reason: text('reason').notNull(),
 
-  // Cost impact
+  // Contract tracking
+  baseContractAmount: integer('base_contract_amount').default(0), // Original contract amount in cents
+  clientContingency: integer('client_contingency').default(0), // Client contingency amount in cents
+  contingencyUsed: integer('contingency_used').default(0), // Contingency used to date in cents
+  contingencyRemaining: integer('contingency_remaining').default(0), // Remaining contingency in cents
+
+  // Proposed vs Approved amounts
+  proposedAmount: integer('proposed_amount').default(0), // Initial proposed amount in cents
+  approvedAmount: integer('approved_amount').default(0), // Final approved amount in cents (may differ from proposed)
+
+  // Cost impact (legacy - keeping for backward compatibility)
   costImpact: integer('cost_impact').default(0), // In cents
   originalCost: integer('original_cost').default(0),
   revisedCost: integer('revised_cost').default(0),

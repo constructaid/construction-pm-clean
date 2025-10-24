@@ -1,0 +1,24 @@
+---
+/**
+ * Owner Dashboard
+ * High-level project oversight, budget tracking, and milestone monitoring
+ */
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+---
+
+<Layout title="Owner Dashboard - ConstructAid">
+  <!-- Client Dashboard Container -->
+  <div id="client-dashboard"></div>
+
+  <script>
+    import { render } from 'solid-js/web';
+    import ClientDashboard from '../../components/ClientDashboard';
+
+    const container = document.getElementById('client-dashboard');
+    if (container) {
+      render(() => ClientDashboard({}), container);
+    }
+  </script>
+</Layout>

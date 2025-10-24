@@ -1,0 +1,134 @@
+---
+/**
+ * XRP Ledger Payments Page
+ * Blockchain-based payment management for construction projects
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+---
+
+<Layout title="XRP Payments - ConstructAid">
+  <ProjectModuleNav projectId={id!} client:load />
+  <ProjectHeader client:load projectId={id!} moduleName="XRP Payments" moduleIcon="⚡" />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-50 ml-64">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Page Header -->
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+          <h1 class="text-3xl font-bold text-gray-900">XRP Ledger Payments</h1>
+          <span class="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
+            TESTNET
+          </span>
+        </div>
+        <p class="text-gray-600">Blockchain-powered payment automation for construction projects</p>
+      </div>
+
+      <!-- Info Banner -->
+      <div class="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 text-3xl">⚡</div>
+          <div class="flex-1">
+            <h3 class="font-bold text-blue-900 mb-2">XRP Ledger Integration</h3>
+            <p class="text-sm text-blue-800 mb-3">
+              ConstructAid uses XRP Ledger for fast, low-cost, transparent payment processing.
+              Transactions settle in 3-5 seconds with fees under $0.01.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div class="bg-white bg-opacity-50 rounded-lg p-3">
+                <div class="font-semibold text-blue-900">⚡ Speed</div>
+                <div class="text-blue-700">3-5 second settlement</div>
+              </div>
+              <div class="bg-white bg-opacity-50 rounded-lg p-3">
+                <div class="font-semibold text-blue-900">💰 Low Cost</div>
+                <div class="text-blue-700">~$0.0002 per transaction</div>
+              </div>
+              <div class="bg-white bg-opacity-50 rounded-lg p-3">
+                <div class="font-semibold text-blue-900">🔒 Secure</div>
+                <div class="text-blue-700">Immutable blockchain ledger</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Feature 1 -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-t-4 border-ca-teal">
+          <div class="text-3xl mb-3">🏦</div>
+          <h3 class="font-bold text-gray-900 mb-2">Escrow Payments</h3>
+          <p class="text-sm text-gray-600">
+            Lock funds in smart escrows until milestones are verified. Automatic release upon completion.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-t-4 border-ca-orange">
+          <div class="text-3xl mb-3">📊</div>
+          <h3 class="font-bold text-gray-900 mb-2">Payment Applications</h3>
+          <p class="text-sm text-gray-600">
+            Link AIA G702/G703 forms to blockchain payments. Transparent, auditable payment history.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-t-4 border-purple-500">
+          <div class="text-3xl mb-3">🌍</div>
+          <h3 class="font-bold text-gray-900 mb-2">Multi-Party Payments</h3>
+          <p class="text-sm text-gray-600">
+            Pay multiple subcontractors instantly with atomic transactions. No intermediaries needed.
+          </p>
+        </div>
+      </div>
+
+      <!-- XRP Payment Manager Component -->
+      <div id="xrp-payment-manager"></div>
+
+      <!-- Help Section -->
+      <div class="mt-8 bg-gray-100 rounded-lg p-6">
+        <h3 class="font-bold text-gray-900 mb-3">Getting Started with XRP Payments</h3>
+        <div class="space-y-2 text-sm text-gray-700">
+          <p><strong>1. Create Wallet:</strong> Click "Create XRPL Wallet" to generate a testnet wallet for this project</p>
+          <p><strong>2. Receive Funds:</strong> Your wallet will be automatically funded with 1000 testnet XRP</p>
+          <p><strong>3. Send Payments:</strong> Use the form to send XRP to contractors, subcontractors, or vendors</p>
+          <p><strong>4. Track Transactions:</strong> All payments are recorded on the immutable XRP Ledger</p>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-gray-300">
+          <h4 class="font-semibold text-gray-900 mb-2">🔗 Resources</h4>
+          <div class="flex flex-wrap gap-3 text-sm">
+            <a href="https://xrpl.org/" target="_blank" class="text-ca-teal hover:underline">
+              XRP Ledger Docs
+            </a>
+            <a href="https://testnet.xrpl.org/" target="_blank" class="text-ca-teal hover:underline">
+              Testnet Explorer
+            </a>
+            <a href="https://faucet.altnet.rippletest.net/" target="_blank" class="text-ca-teal hover:underline">
+              Testnet Faucet
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { render } from 'solid-js/web';
+    import XRPPaymentManager from '../../../components/XRPPaymentManager';
+
+    const container = document.getElementById('xrp-payment-manager');
+    if (container) {
+      const pathParts = window.location.pathname.split('/');
+      const projectId = parseInt(pathParts[2]);
+
+      render(() => XRPPaymentManager({ projectId }), container);
+    }
+  </script>
+</Layout>

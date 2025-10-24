@@ -1,0 +1,918 @@
+---
+/**
+ * Project Tasks / Action Log Page
+ * Displays and manages all tasks, action items, and to-dos for a project
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+---
+
+<Layout title="Tasks & Action Log - ConstructAid">
+  <!-- Left Sidebar Navigation -->
+  <ProjectModuleNav client:load projectId={id!} />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-50 ml-64">
+    <!-- Top Bar with Breadcrumbs -->
+    <div class="bg-white border-b border-gray-200 shadow-sm sticky top-16 z-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2 text-sm text-gray-600">
+            <a href="/projects" class="hover:text-gray-900">Projects</a>
+            <span>/</span>
+            <a href={`/projects/${id}`} class="hover:text-gray-900" id="breadcrumb-project-name">Project</a>
+            <span>/</span>
+            <span class="text-gray-900 font-medium">Tasks & Action Log</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Page Header -->
+      <div class="mb-6">
+        <h1 class="text-3xl font-heading font-light text-gray-900 mb-2">Tasks & Action Log</h1>
+        <p class="text-gray-600">Track all project activities, action items, and to-dos</p>
+      </div>
+
+      <!-- Task Statistics Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6" id="task-stats">
+        <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Tasks</p>
+              <p class="text-2xl font-heading font-light text-gray-900 mt-1" id="stat-total">-</p>
+            </div>
+            <div class="p-2 bg-gray-100 rounded-lg">
+              <span class="text-2xl">📋</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Pending</p>
+              <p class="text-2xl font-heading font-light text-yellow-600 mt-1" id="stat-pending">-</p>
+            </div>
+            <div class="p-2 bg-yellow-50 rounded-lg">
+              <span class="text-2xl">⏳</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">In Progress</p>
+              <p class="text-2xl font-heading font-light text-blue-600 mt-1" id="stat-in-progress">-</p>
+            </div>
+            <div class="p-2 bg-blue-50 rounded-lg">
+              <span class="text-2xl">🚧</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Completed</p>
+              <p class="text-2xl font-heading font-light text-green-600 mt-1" id="stat-completed">-</p>
+            </div>
+            <div class="p-2 bg-green-50 rounded-lg">
+              <span class="text-2xl">✅</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Overdue</p>
+              <p class="text-2xl font-heading font-light text-red-600 mt-1" id="stat-overdue">-</p>
+            </div>
+            <div class="p-2 bg-red-50 rounded-lg">
+              <span class="text-2xl">⚠️</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Urgent</p>
+              <p class="text-2xl font-heading font-light text-red-600 mt-1" id="stat-urgent">-</p>
+            </div>
+            <div class="p-2 bg-red-50 rounded-lg">
+              <span class="text-2xl">🔥</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Create Task -->
+      <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200 shadow-ca-sm p-4 mb-6">
+        <form id="quick-create-form" class="flex gap-3 items-start">
+          <div class="flex-1">
+            <input
+              type="text"
+              id="quick-task-title"
+              placeholder="Quick add: Type task title and press Enter..."
+              class="w-full px-4 py-3 border-2 border-purple-300 rounded-lg text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            />
+          </div>
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md font-medium whitespace-nowrap"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add Task
+          </button>
+          <button
+            type="button"
+            onclick="openCreateTaskModal()"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-ca-orange text-white rounded-lg hover:opacity-90 transition-all shadow-md font-medium whitespace-nowrap"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Full Form
+          </button>
+        </form>
+        <p class="text-xs text-purple-700 mt-2 ml-1">💡 Quick add creates a pending task with medium priority. Use "Full Form" for detailed information.</p>
+      </div>
+
+      <!-- Filters and Actions Bar -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-ca-sm p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Status Filter -->
+            <select id="filter-status" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ca-teal focus:border-ca-teal">
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="on_hold">On Hold</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+
+            <!-- Priority Filter -->
+            <select id="filter-priority" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ca-teal focus:border-ca-teal">
+              <option value="">All Priorities</option>
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+
+            <!-- Category Filter -->
+            <select id="filter-category" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ca-teal focus:border-ca-teal">
+              <option value="">All Categories</option>
+              <option value="RFI Follow-up">RFI Follow-up</option>
+              <option value="Submittal Review">Submittal Review</option>
+              <option value="Inspection Required">Inspection Required</option>
+              <option value="Safety Issue">Safety Issue</option>
+              <option value="Quality Control">Quality Control</option>
+              <option value="Change Order">Change Order</option>
+              <option value="Punch List Item">Punch List Item</option>
+              <option value="Schedule Coordination">Schedule Coordination</option>
+              <option value="Material Order">Material Order</option>
+              <option value="Budget Review">Budget Review</option>
+              <option value="Design Clarification">Design Clarification</option>
+              <option value="Client Communication">Client Communication</option>
+              <option value="Permit/Approval">Permit/Approval</option>
+              <option value="Field Issue">Field Issue</option>
+            </select>
+
+            <!-- Search -->
+            <input
+              type="text"
+              id="search-tasks"
+              placeholder="Search tasks..."
+              class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ca-teal focus:border-ca-teal w-64"
+            />
+
+            <!-- Clear Filters -->
+            <button
+              id="clear-filters"
+              class="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks List Container -->
+      <div id="tasks-container" class="space-y-4">
+        <div class="text-center py-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-ca-teal mx-auto mb-4"></div>
+          <p class="text-gray-600">Loading tasks...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const projectId = window.location.pathname.split('/')[2];
+  let allTasks: any[] = [];
+  let taskStats: any = {};
+
+  // Load tasks on page load
+  loadTasks();
+
+  // Event listeners
+  document.getElementById('filter-status')?.addEventListener('change', filterTasks);
+  document.getElementById('filter-priority')?.addEventListener('change', filterTasks);
+  document.getElementById('filter-category')?.addEventListener('change', filterTasks);
+  document.getElementById('search-tasks')?.addEventListener('input', filterTasks);
+  document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
+  document.getElementById('quick-create-form')?.addEventListener('submit', handleQuickCreate);
+
+  async function loadTasks() {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/tasks`);
+      const data = await response.json();
+
+      if (data.success) {
+        allTasks = data.tasks;
+        taskStats = data.stats;
+        updateStatistics();
+        renderTasks(allTasks);
+
+        // Load project name for breadcrumb
+        const projectResponse = await fetch(`/api/projects/${projectId}`);
+        const projectData = await projectResponse.json();
+        if (projectData.success) {
+          const breadcrumbEl = document.getElementById('breadcrumb-project-name');
+          if (breadcrumbEl) {
+            breadcrumbEl.textContent = projectData.project.name;
+          }
+        }
+      } else {
+        renderError('Failed to load tasks');
+      }
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      renderError('Failed to load tasks');
+    }
+  }
+
+  function updateStatistics() {
+    document.getElementById('stat-total')!.textContent = taskStats.total?.toString() || '0';
+    document.getElementById('stat-pending')!.textContent = taskStats.pending?.toString() || '0';
+    document.getElementById('stat-in-progress')!.textContent = taskStats.in_progress?.toString() || '0';
+    document.getElementById('stat-completed')!.textContent = taskStats.completed?.toString() || '0';
+    document.getElementById('stat-overdue')!.textContent = taskStats.overdue?.toString() || '0';
+    document.getElementById('stat-urgent')!.textContent = taskStats.urgent?.toString() || '0';
+  }
+
+  function filterTasks() {
+    const statusFilter = (document.getElementById('filter-status') as HTMLSelectElement)?.value;
+    const priorityFilter = (document.getElementById('filter-priority') as HTMLSelectElement)?.value;
+    const categoryFilter = (document.getElementById('filter-category') as HTMLSelectElement)?.value;
+    const searchTerm = (document.getElementById('search-tasks') as HTMLInputElement)?.value.toLowerCase();
+
+    const filtered = allTasks.filter(task => {
+      const matchesStatus = !statusFilter || task.status === statusFilter;
+      const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+      const matchesCategory = !categoryFilter || task.category === categoryFilter;
+      const matchesSearch = !searchTerm ||
+        task.title.toLowerCase().includes(searchTerm) ||
+        task.description?.toLowerCase().includes(searchTerm) ||
+        task.taskNumber?.toLowerCase().includes(searchTerm) ||
+        task.assignedToName?.toLowerCase().includes(searchTerm);
+
+      return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
+    });
+
+    renderTasks(filtered);
+  }
+
+  function clearFilters() {
+    (document.getElementById('filter-status') as HTMLSelectElement).value = '';
+    (document.getElementById('filter-priority') as HTMLSelectElement).value = '';
+    (document.getElementById('filter-category') as HTMLSelectElement).value = '';
+    (document.getElementById('search-tasks') as HTMLInputElement).value = '';
+    renderTasks(allTasks);
+  }
+
+  async function handleQuickCreate(e: Event) {
+    e.preventDefault();
+
+    const titleInput = document.getElementById('quick-task-title') as HTMLInputElement;
+    const title = titleInput.value.trim();
+
+    if (!title) {
+      alert('Please enter a task title');
+      return;
+    }
+
+    // Create quick task with defaults
+    const taskData = {
+      projectId: parseInt(projectId),
+      title,
+      status: 'pending',
+      priority: 'medium',
+      ballInCourt: 'General Contractor', // Default to GC
+      category: 'Field Issue', // Default category
+    };
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Clear input
+        titleInput.value = '';
+
+        // Reload tasks
+        await loadTasks();
+
+        // Show success with a brief visual feedback
+        titleInput.classList.add('border-green-500');
+        setTimeout(() => {
+          titleInput.classList.remove('border-green-500');
+        }, 1000);
+      } else {
+        alert('Failed to create task: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+      alert('Failed to create task. Please try again.');
+    }
+  }
+
+  function renderTasks(tasks: any[]) {
+    const container = document.getElementById('tasks-container');
+    if (!container) return;
+
+    if (tasks.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
+          <p class="text-gray-600 mb-4">Get started by creating your first task</p>
+          <button onclick="openCreateTaskModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-ca-orange text-white rounded-lg hover:opacity-90 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Create Task
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = tasks.map(task => renderTaskCard(task)).join('');
+  }
+
+  function renderTaskCard(task: any) {
+    const priorityColors = {
+      urgent: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
+      high: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' },
+      medium: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' },
+      low: { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-800' },
+    };
+
+    const statusColors = {
+      pending: { badge: 'bg-yellow-100 text-yellow-800', icon: '⏳' },
+      in_progress: { badge: 'bg-blue-100 text-blue-800', icon: '🚧' },
+      completed: { badge: 'bg-green-100 text-green-800', icon: '✅' },
+      on_hold: { badge: 'bg-gray-100 text-gray-800', icon: '⏸️' },
+      cancelled: { badge: 'bg-red-100 text-red-800', icon: '❌' },
+    };
+
+    const priority = priorityColors[task.priority] || priorityColors.medium;
+    const status = statusColors[task.status] || statusColors.pending;
+
+    const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
+
+    // Ball in Court icon mapping
+    const ballInCourtIcons = {
+      'Owner': '🏢',
+      'Design Team': '✏️',
+      'General Contractor': '👷',
+      'Sub Contractor': '🔧',
+      'Building Inspector': '🏛️',
+      'Fire Marshal': '🚒',
+      'City/County': '🏛️',
+      'Utility Company': '⚡',
+      'Vendor/Supplier': '📦',
+    };
+
+    return `
+      <div class="bg-white rounded-lg border ${priority.border} shadow-ca-sm hover:shadow-md transition-shadow cursor-pointer" onclick="viewTaskDetail(${task.id})">
+        <div class="p-5">
+          <!-- Header Row -->
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-sm font-mono text-gray-500">${task.taskNumber || `TASK-${task.id}`}</span>
+                ${isOverdue ? '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">OVERDUE</span>' : ''}
+                ${task.ballInCourt ? `<span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded" title="Ball in Court: ${task.ballInCourt}">${ballInCourtIcons[task.ballInCourt] || '⚽'} ${task.ballInCourt}</span>` : ''}
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-1">${task.title}</h3>
+              ${task.description ? `<p class="text-sm text-gray-600 line-clamp-2">${task.description}</p>` : ''}
+            </div>
+            <div class="flex flex-col items-end gap-2 ml-4">
+              <span class="px-2 py-1 rounded text-xs font-medium ${priority.badge}">${task.priority.toUpperCase()}</span>
+              <span class="px-2 py-1 rounded text-xs font-medium ${status.badge}">${status.icon} ${task.status.replace('_', ' ').toUpperCase()}</span>
+            </div>
+          </div>
+
+          <!-- Details Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+            <div>
+              <p class="text-xs text-gray-500 mb-1">Category</p>
+              <p class="text-sm font-medium text-gray-900">${task.category || '-'}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 mb-1">Assigned To</p>
+              <p class="text-sm font-medium text-gray-900">${task.assignedToName || 'Unassigned'}</p>
+              ${task.assignedToCompany ? `<p class="text-xs text-gray-500">${task.assignedToCompany}</p>` : ''}
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 mb-1">Due Date</p>
+              <p class="text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-gray-900'}">${task.dueDate ? formatDate(task.dueDate) : 'No due date'}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 mb-1">Location</p>
+              <p class="text-sm font-medium text-gray-900">${task.location || '-'}</p>
+            </div>
+          </div>
+
+          <!-- Progress Bar (if applicable) -->
+          ${task.percentComplete !== null && task.percentComplete > 0 ? `
+            <div class="mt-4">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs text-gray-600">Progress</span>
+                <span class="text-xs font-medium text-gray-900">${task.percentComplete}%</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-ca-teal h-2 rounded-full" style="width: ${task.percentComplete}%"></div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Footer -->
+          <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+            <div class="flex items-center gap-4 text-sm text-gray-500">
+              ${task.estimatedHours ? `<span>⏱️ ${task.estimatedHours}h est.</span>` : ''}
+              ${task.actualHours ? `<span>✓ ${task.actualHours}h actual</span>` : ''}
+              ${task.commentCount ? `<span>💬 ${task.commentCount} comments</span>` : ''}
+            </div>
+            ${task.tags ? `
+              <div class="flex flex-wrap gap-1 justify-end">
+                ${task.tags.split(',').slice(0, 3).map(tag =>
+                  `<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">${tag.trim()}</span>`
+                ).join('')}
+              </div>
+            ` : ''}
+          </div>
+
+          ${task.blockers ? `
+            <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+              <strong>⚠️ Blocker:</strong> ${task.blockers}
+            </div>
+          ` : ''}
+
+          ${task.notes ? `
+            <div class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+              <strong>📝 Note:</strong> ${task.notes}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function formatDate(dateString: string) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays === -1) return 'Yesterday';
+    if (diffDays < -1) return `${Math.abs(diffDays)} days ago`;
+    if (diffDays > 1 && diffDays <= 7) return `in ${diffDays} days`;
+
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderError(message: string) {
+    const container = document.getElementById('tasks-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="text-center py-12 bg-white rounded-lg border border-red-200">
+        <svg class="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">{message}</h3>
+        <button onclick="loadTasks()" class="mt-4 px-4 py-2 bg-ca-teal text-white rounded-lg hover:opacity-90">
+          Retry
+        </button>
+      </div>
+    `;
+  }
+
+  function viewTaskDetail(taskId: number) {
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Create detailed modal
+    const modal = document.createElement('div');
+    modal.id = 'task-detail-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-heading font-light text-gray-900">${task.title}</h2>
+            <p class="text-sm text-gray-500 mt-1">${task.taskNumber || `TASK-${task.id}`}</p>
+          </div>
+          <button onclick="closeTaskModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Main Content (2/3) -->
+            <div class="md:col-span-2 space-y-6">
+              ${task.description ? `
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+                  <p class="text-gray-700">${task.description}</p>
+                </div>
+              ` : ''}
+
+              ${task.blockers ? `
+                <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <h3 class="text-sm font-semibold text-red-900 mb-2">⚠️ Blockers</h3>
+                  <p class="text-sm text-red-700">${task.blockers}</p>
+                </div>
+              ` : ''}
+
+              ${task.notes ? `
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900 mb-2">Notes</h3>
+                  <p class="text-gray-700">${task.notes}</p>
+                </div>
+              ` : ''}
+
+              ${task.internalNotes ? `
+                <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h3 class="text-sm font-semibold text-yellow-900 mb-2">🔒 Internal Notes</h3>
+                  <p class="text-sm text-yellow-700">${task.internalNotes}</p>
+                </div>
+              ` : ''}
+
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Comments</h3>
+                <div class="space-y-3">
+                  <p class="text-sm text-gray-500">No comments yet.</p>
+                  <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3" placeholder="Add a comment..."></textarea>
+                  <button class="px-4 py-2 bg-ca-orange text-white rounded-lg hover:opacity-90">Post Comment</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sidebar (1/3) -->
+            <div class="space-y-4">
+              <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="font-semibold text-gray-900 mb-3">Task Details</h3>
+                <dl class="space-y-3 text-sm">
+                  <div>
+                    <dt class="text-gray-600 mb-1">Status</dt>
+                    <dd class="font-medium">${task.status.replace('_', ' ').toUpperCase()}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Priority</dt>
+                    <dd class="font-medium">${task.priority.toUpperCase()}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Category</dt>
+                    <dd class="font-medium">${task.category || '-'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Type</dt>
+                    <dd class="font-medium">${task.type || '-'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Assigned To</dt>
+                    <dd class="font-medium">${task.assignedToName || 'Unassigned'}</dd>
+                    ${task.assignedToCompany ? `<dd class="text-xs text-gray-500">${task.assignedToCompany}</dd>` : ''}
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Created By</dt>
+                    <dd class="font-medium">${task.createdByName || '-'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Due Date</dt>
+                    <dd class="font-medium">${task.dueDate ? formatDate(task.dueDate) : 'Not set'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Location</dt>
+                    <dd class="font-medium">${task.location || '-'}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-600 mb-1">Cost Code</dt>
+                    <dd class="font-medium">${task.costCode || '-'}</dd>
+                  </div>
+                  ${task.estimatedHours ? `
+                    <div>
+                      <dt class="text-gray-600 mb-1">Estimated Hours</dt>
+                      <dd class="font-medium">${task.estimatedHours}h</dd>
+                    </div>
+                  ` : ''}
+                  ${task.actualHours ? `
+                    <div>
+                      <dt class="text-gray-600 mb-1">Actual Hours</dt>
+                      <dd class="font-medium">${task.actualHours}h</dd>
+                    </div>
+                  ` : ''}
+                  ${task.percentComplete !== null ? `
+                    <div>
+                      <dt class="text-gray-600 mb-1">Progress</dt>
+                      <dd class="font-medium">${task.percentComplete}%</dd>
+                    </div>
+                  ` : ''}
+                </dl>
+              </div>
+
+              <button onclick="editTask(${task.id})" class="w-full px-4 py-2 bg-ca-teal text-white rounded-lg hover:opacity-90">
+                Edit Task
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function openCreateTaskModal() {
+    const modal = document.createElement('div');
+    modal.id = 'create-task-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-heading font-light text-gray-900">Create New Task</h2>
+          <button onclick="closeCreateTaskModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <form id="create-task-form" class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left Column -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Task Title *</label>
+                <input type="text" id="new-task-title" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="Enter task title">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="new-task-description" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="Describe the task..."></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                  <select id="new-task-category" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal">
+                    <option value="">Select category</option>
+                    <option value="RFI Follow-up">RFI Follow-up</option>
+                    <option value="Submittal Review">Submittal Review</option>
+                    <option value="Inspection Required">Inspection Required</option>
+                    <option value="Safety Issue">Safety Issue</option>
+                    <option value="Quality Control">Quality Control</option>
+                    <option value="Change Order">Change Order</option>
+                    <option value="Punch List Item">Punch List Item</option>
+                    <option value="Schedule Coordination">Schedule Coordination</option>
+                    <option value="Material Order">Material Order</option>
+                    <option value="Budget Review">Budget Review</option>
+                    <option value="Design Clarification">Design Clarification</option>
+                    <option value="Client Communication">Client Communication</option>
+                    <option value="Permit/Approval">Permit/Approval</option>
+                    <option value="Field Issue">Field Issue</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Priority *</label>
+                  <select id="new-task-priority" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal">
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ball in Court (Responsible Party) *</label>
+                <select id="new-task-ball-in-court" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal">
+                  <option value="">Select responsible party</option>
+                  <optgroup label="Project Team">
+                    <option value="Owner">🏢 Owner</option>
+                    <option value="Design Team">✏️ Design Team</option>
+                    <option value="General Contractor">👷 General Contractor</option>
+                    <option value="Sub Contractor">🔧 Sub Contractor</option>
+                  </optgroup>
+                  <optgroup label="External Parties">
+                    <option value="Building Inspector">🏛️ Building Inspector</option>
+                    <option value="Fire Marshal">🚒 Fire Marshal</option>
+                    <option value="City/County">🏛️ City/County</option>
+                    <option value="Utility Company">⚡ Utility Company</option>
+                    <option value="Vendor/Supplier">📦 Vendor/Supplier</option>
+                  </optgroup>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">Who is responsible for the next action?</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Assigned To Name</label>
+                <input type="text" id="new-task-assigned-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="John Doe">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Assigned To Company</label>
+                <input type="text" id="new-task-assigned-company" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="ABC Construction">
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <input type="date" id="new-task-due-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input type="text" id="new-task-location" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="Building A - 2nd Floor">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cost Code / Division</label>
+                <input type="text" id="new-task-cost-code" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="DIV 26">
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Estimated Hours</label>
+                  <input type="number" id="new-task-estimated-hours" min="0" step="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="4">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">% Complete</label>
+                  <input type="number" id="new-task-percent-complete" min="0" max="100" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Related Document</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <select id="new-task-doc-type" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal">
+                    <option value="">Type</option>
+                    <option value="RFI">RFI</option>
+                    <option value="Submittal">Submittal</option>
+                    <option value="Change Order">Change Order</option>
+                    <option value="Drawing">Drawing</option>
+                  </select>
+                  <input type="text" id="new-task-doc-number" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="Number">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Blockers / Dependencies</label>
+                <textarea id="new-task-blockers" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="What's blocking this task?"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea id="new-task-notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="Additional notes..."></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
+                <input type="text" id="new-task-tags" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ca-teal" placeholder="electrical, urgent, hvac">
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-gray-200 flex justify-end gap-3">
+            <button type="button" onclick="closeCreateTaskModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" class="px-6 py-2 bg-ca-orange text-white rounded-lg hover:opacity-90 transition-colors font-medium">
+              Create Task
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Handle form submission
+    document.getElementById('create-task-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleCreateTask();
+    });
+  }
+
+  async function handleCreateTask() {
+    const taskData = {
+      projectId: parseInt(projectId),
+      title: (document.getElementById('new-task-title') as HTMLInputElement).value,
+      description: (document.getElementById('new-task-description') as HTMLTextAreaElement).value,
+      category: (document.getElementById('new-task-category') as HTMLSelectElement).value,
+      priority: (document.getElementById('new-task-priority') as HTMLSelectElement).value,
+      status: 'pending',
+      ballInCourt: (document.getElementById('new-task-ball-in-court') as HTMLSelectElement).value,
+      assignedToName: (document.getElementById('new-task-assigned-name') as HTMLInputElement).value,
+      assignedToCompany: (document.getElementById('new-task-assigned-company') as HTMLInputElement).value,
+      dueDate: (document.getElementById('new-task-due-date') as HTMLInputElement).value || null,
+      location: (document.getElementById('new-task-location') as HTMLInputElement).value,
+      costCode: (document.getElementById('new-task-cost-code') as HTMLInputElement).value,
+      estimatedHours: parseInt((document.getElementById('new-task-estimated-hours') as HTMLInputElement).value) || null,
+      percentComplete: parseInt((document.getElementById('new-task-percent-complete') as HTMLInputElement).value) || 0,
+      relatedDocumentType: (document.getElementById('new-task-doc-type') as HTMLSelectElement).value,
+      relatedDocumentNumber: (document.getElementById('new-task-doc-number') as HTMLInputElement).value,
+      blockers: (document.getElementById('new-task-blockers') as HTMLTextAreaElement).value,
+      notes: (document.getElementById('new-task-notes') as HTMLTextAreaElement).value,
+      tags: (document.getElementById('new-task-tags') as HTMLInputElement).value,
+    };
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeCreateTaskModal();
+        // Reload tasks
+        await loadTasks();
+        // Show success message
+        alert('Task created successfully!');
+      } else {
+        alert('Failed to create task: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+      alert('Failed to create task. Please try again.');
+    }
+  }
+
+  function closeCreateTaskModal() {
+    const modal = document.getElementById('create-task-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  function editTask(taskId: number) {
+    alert(`Edit task ${taskId} - Full edit form will be implemented.`);
+  }
+
+  function closeTaskModal() {
+    const modal = document.getElementById('task-detail-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  // Make functions globally available
+  (window as any).viewTaskDetail = viewTaskDetail;
+  (window as any).closeTaskModal = closeTaskModal;
+  (window as any).closeCreateTaskModal = closeCreateTaskModal;
+  (window as any).openCreateTaskModal = openCreateTaskModal;
+  (window as any).editTask = editTask;
+  (window as any).loadTasks = loadTasks;
+</script>

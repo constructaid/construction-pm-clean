@@ -67,7 +67,9 @@ export default {
         'ca-xl': '0 8px 20px rgba(0, 0, 0, 0.12)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Poppins', 'Arial', 'sans-serif'],
+        heading: ['Marcellus', 'Arial', 'sans-serif'],
+        body: ['Poppins', 'Arial', 'sans-serif'],
       },
     },
   },
