@@ -81,9 +81,9 @@ export default function RFIManager(props: RFIManagerProps) {
   return (
     <div>
       <Show when={isLoading()}>
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p class="text-gray-600 mt-2">Loading...</p>
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-12 text-center">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <p class="text-gray-300 mt-2">Loading...</p>
         </div>
       </Show>
 
@@ -96,10 +96,10 @@ export default function RFIManager(props: RFIManagerProps) {
       </Show>
 
       <Show when={!isLoading() && showForm() && project()}>
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
           <button
             onClick={handleCancel}
-            class="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+            class="mb-6 flex items-center gap-2 text-gray-300 hover:text-white transition"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -107,22 +107,22 @@ export default function RFIManager(props: RFIManagerProps) {
             Back to RFI Log
           </button>
 
-          <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 class="text-sm font-semibold text-blue-900 mb-2">Project Information</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
+          <div class="mb-6 p-4 bg-gray-900 rounded-lg border border-gray-700">
+            <h3 class="text-sm font-semibold text-blue-400 mb-2">Project Information</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-300">
               <div>
-                <span class="font-medium">Project:</span> {project()?.name}
+                <span class="font-medium text-gray-400">Project:</span> {project()?.name}
               </div>
               <div>
-                <span class="font-medium">Project #:</span> {project()?.projectNumber}
+                <span class="font-medium text-gray-400">Project #:</span> {project()?.projectNumber}
               </div>
               <Show when={projectInfo()?.projectAddress}>
                 <div class="md:col-span-2">
-                  <span class="font-medium">Location:</span> {projectInfo()?.projectAddress}
+                  <span class="font-medium text-gray-400">Location:</span> {projectInfo()?.projectAddress}
                 </div>
               </Show>
               <div>
-                <span class="font-medium">Next RFI #:</span> {nextRFINumber()}
+                <span class="font-medium text-gray-400">Next RFI #:</span> {nextRFINumber()}
               </div>
             </div>
           </div>
