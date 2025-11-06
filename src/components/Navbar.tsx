@@ -97,6 +97,13 @@ export function Navbar() {
               >
                 Reports
               </a>
+              <a
+                href="/admin/users"
+                class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-ca-orange hover:bg-gray-800 rounded transition-all flex items-center gap-2"
+              >
+                <span>⚙️</span>
+                <span>Admin</span>
+              </a>
               {showHR() && (
                 <a
                   href="/hr"

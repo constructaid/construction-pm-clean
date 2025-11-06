@@ -1,0 +1,174 @@
+/**
+ * Single User API Endpoint
+ * GET /api/users/[id] - Get user by ID
+ * PUT /api/users/[id] - Update user
+ * DELETE /api/users/[id] - Soft delete user
+ */
+import type { APIRoute } from 'astro';
+import { db, users } from '../../../lib/db';
+import { eq, and } from 'drizzle-orm';
+import {
+  apiHandler,
+  NotFoundError,
+  checkRateLimit,
+} from '../../../lib/api/error-handler';
+import { excludeDeleted, softDelete } from '../../../lib/db/soft-delete';
+import bcrypt from 'bcryptjs';
+
+export const prerender = false;
+
+// ========================================
+// GET - Fetch single user
+// ========================================
+
+export const GET: APIRoute = apiHandler(async (context) => {
+  const { id } = context.params;
+
+  // Rate limiting
+  checkRateLimit(`user-detail-${context.clientAddress}`, 200, 60000);
+
+  console.log('GET /api/users/' + id);
+
+  // Fetch user (excluding password and soft-deleted)
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: users.role,
+      status: users.status,
+      company: users.company,
+      phone: users.phone,
+      avatar: users.avatar,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    })
+    .from(users)
+    .where(and(
+      eq(users.id, parseInt(id as string)),
+      excludeDeleted()
+    ))
+    .limit(1);
+
+  if (!user) {
+    throw new NotFoundError('User', id);
+  }
+
+  return { user };
+});
+
+// ========================================
+// PUT - Update user
+// ========================================
+
+export const PUT: APIRoute = apiHandler(async (context) => {
+  const { id } = context.params;
+
+  // Rate limiting
+  checkRateLimit(`user-update-${context.clientAddress}`, 20, 60000);
+
+  const data = await context.request.json();
+
+  console.log('PUT /api/users/' + id, 'Data:', data);
+
+  // Check if user exists
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(and(
+      eq(users.id, parseInt(id as string)),
+      excludeDeleted()
+    ))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('User', id);
+  }
+
+  // Prepare update data
+  const updateData: any = {
+    updatedAt: new Date(),
+  };
+
+  // Only update fields that were provided
+  if (data.firstName !== undefined) updateData.firstName = data.firstName;
+  if (data.lastName !== undefined) updateData.lastName = data.lastName;
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.role !== undefined) updateData.role = data.role;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.company !== undefined) updateData.company = data.company;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.avatar !== undefined) updateData.avatar = data.avatar;
+  if (data.emailVerified !== undefined) updateData.emailVerified = data.emailVerified;
+
+  // Handle password update separately (requires hashing)
+  if (data.password) {
+    updateData.password = await bcrypt.hash(data.password, 10);
+  }
+
+  // Update user
+  const [updated] = await db
+    .update(users)
+    .set(updateData)
+    .where(eq(users.id, parseInt(id as string)))
+    .returning({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: users.role,
+      status: users.status,
+      company: users.company,
+      phone: users.phone,
+      avatar: users.avatar,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    });
+
+  console.log('User updated successfully:', updated.id);
+
+  return {
+    message: 'User updated successfully',
+    user: updated,
+  };
+});
+
+// ========================================
+// DELETE - Soft delete user
+// ========================================
+
+export const DELETE: APIRoute = apiHandler(async (context) => {
+  const { id } = context.params;
+
+  // Rate limiting
+  checkRateLimit(`user-delete-${context.clientAddress}`, 10, 60000);
+
+  console.log('DELETE /api/users/' + id);
+
+  // Check if user exists
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(and(
+      eq(users.id, parseInt(id as string)),
+      excludeDeleted()
+    ))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('User', id);
+  }
+
+  // Soft delete the user
+  await softDelete(users, parseInt(id as string), 1); // TODO: Get actual admin user ID from context
+
+  console.log('User soft-deleted successfully:', id);
+
+  return {
+    message: 'User deleted successfully',
+    userId: parseInt(id as string),
+  };
+});

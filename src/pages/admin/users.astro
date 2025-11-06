@@ -1,0 +1,96 @@
+---
+/**
+ * User Management Admin Page
+ * Accessible only to Admin users
+ */
+import Layout from '../../layouts/Layout.astro';
+import { Navbar } from '../../components/Navbar.tsx';
+import UserManager from '../../components/UserManager.tsx';
+
+export const prerender = false;
+---
+
+<Layout title="User Management - Admin">
+  <div class="min-h-screen bg-gray-900">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Page Header -->
+      <div class="mb-6">
+        <div class="flex items-center gap-3 mb-2">
+          <a
+            href="/"
+            class="text-gray-400 hover:text-white transition-colors"
+          >
+            ← Back to Dashboard
+          </a>
+        </div>
+        <h1 class="text-3xl font-bold text-white">Admin Panel</h1>
+        <p class="text-gray-400 mt-2">
+          Manage all users, roles, and permissions across your organization
+        </p>
+      </div>
+
+      <!-- User Manager Component -->
+      <UserManager client:load />
+
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div class="text-gray-400 text-sm mb-1">Total Users</div>
+          <div class="text-3xl font-bold text-white" id="total-users-stat">-</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div class="text-gray-400 text-sm mb-1">Active Users</div>
+          <div class="text-3xl font-bold text-green-400" id="active-users-stat">-</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div class="text-gray-400 text-sm mb-1">Pending Verification</div>
+          <div class="text-3xl font-bold text-yellow-400" id="pending-users-stat">-</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div class="text-gray-400 text-sm mb-1">Suspended</div>
+          <div class="text-3xl font-bold text-red-400" id="suspended-users-stat">-</div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="mt-6 bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h2 class="text-xl font-bold text-white mb-4">Recent Activity</h2>
+        <div class="text-gray-400 text-sm">
+          Activity log will be displayed here...
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  // Load user statistics
+  async function loadStats() {
+    try {
+      const response = await fetch('/api/users?limit=1000');
+      const data = await response.json();
+
+      if (data.success && data.data.users) {
+        const users = data.data.users;
+
+        // Calculate stats
+        const total = users.length;
+        const active = users.filter((u: any) => u.status === 'ACTIVE').length;
+        const pending = users.filter((u: any) => u.status === 'PENDING_VERIFICATION').length;
+        const suspended = users.filter((u: any) => u.status === 'SUSPENDED').length;
+
+        // Update DOM
+        document.getElementById('total-users-stat')!.textContent = total.toString();
+        document.getElementById('active-users-stat')!.textContent = active.toString();
+        document.getElementById('pending-users-stat')!.textContent = pending.toString();
+        document.getElementById('suspended-users-stat')!.textContent = suspended.toString();
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  }
+
+  // Load stats on page load
+  loadStats();
+</script>
+</Layout>
