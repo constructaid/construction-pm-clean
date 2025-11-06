@@ -26,7 +26,7 @@ import {
   logDelete,
   createAuditContext,
   sanitizeForAudit,
-  detectChanges,
+  calculateChanges,
 } from '../../../lib/api/audit-logger';
 
 export const prerender = false;

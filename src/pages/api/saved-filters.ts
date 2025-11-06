@@ -30,7 +30,7 @@ import {
   logDelete,
   createAuditContext,
   sanitizeForAudit,
-  detectChanges,
+  calculateChanges,
 } from '../../lib/api/audit-logger';
 import { z } from 'zod';
 
