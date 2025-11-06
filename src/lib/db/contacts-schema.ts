@@ -76,6 +76,10 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
   createdBy: integer('created_by'),
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
 });
 
 // Contact Communication Log - Track all communications with contacts

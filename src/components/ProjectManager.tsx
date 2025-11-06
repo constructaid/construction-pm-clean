@@ -72,7 +72,7 @@ const getStatusBg = (status: Project['status']) => {
   switch (status) {
     case 'completed': return '#3D9991'; // ConstructAid teal
     case 'in_progress': return '#4BAAD8'; // ConstructAid blue
-    case 'planning': return '#FF5E15'; // ConstructAid orange
+    case 'planning': return '#FF6600'; // Safety orange
     case 'on_hold': return '#FFB81C'; // Warning yellow
     case 'cancelled': return '#E6332A'; // Error red
     default: return '#6B6B6B';
@@ -98,7 +98,7 @@ export function ProjectList() {
       const response = await fetch('/api/projects?userId=1'); // Using mock GC user ID
       if (response.ok) {
         const data = await response.json();
-        setDbProjects(data.projects || []);
+        setDbProjects(data.data?.projects || []);
       }
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -118,13 +118,13 @@ export function ProjectList() {
   };
 
   return (
-    <div class="bg-background-light min-h-screen">
+    <div class="bg-gray-900 min-h-screen">
       <div class="max-w-7xl mx-auto py-6 px-6">
         {/* Header */}
         <div class="flex justify-between items-center mb-8">
           <div>
-            <h1 class="text-3xl font-semibold text-text-primary">Projects</h1>
-            <p class="mt-1 text-text-secondary">Manage and track all construction projects</p>
+            <h1 class="text-3xl font-semibold text-white">Projects</h1>
+            <p class="mt-1 text-gray-400">Manage and track all construction projects</p>
           </div>
           <a
             href="/projects/new"
@@ -298,47 +298,47 @@ export function NewProjectForm() {
   };
 
   return (
-    <div class="bg-background-light min-h-screen py-8">
+    <div class="bg-gray-900 min-h-screen py-8">
       <div class="max-w-3xl mx-auto px-6">
         <div class="mb-8">
-          <h1 class="text-3xl font-semibold text-text-primary">Create New Project</h1>
-          <p class="mt-2 text-text-secondary">Add a new construction project to your portfolio</p>
+          <h1 class="text-3xl font-semibold text-white">Create New Project</h1>
+          <p class="mt-2 text-gray-400">Add a new construction project to your portfolio</p>
         </div>
 
         <Show
           when={showSuccess()}
           fallback={
-            <form onSubmit={handleSubmit} class="bg-white shadow-ca-md rounded border border-gray-200 p-8 space-y-6">
+            <form onSubmit={handleSubmit} class="bg-gray-800 shadow-xl rounded-lg border border-gray-700 p-8 space-y-6">
               <div>
-                <label class="block text-sm font-medium text-text-primary mb-2">Project Name *</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Project Name *</label>
                 <input
                   type="text"
                   required
                   value={formData().name}
                   onInput={(e) => updateField('name', e.currentTarget.value)}
-                  class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                  class="w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FF6600] transition-all"
                   placeholder="Enter project name"
                 />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-text-primary mb-2">Description</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
                 <textarea
                   value={formData().description}
                   onInput={(e) => updateField('description', e.currentTarget.value)}
                   rows="4"
-                  class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                  class="w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FF6600] transition-all resize-none"
                   placeholder="Project description..."
                 ></textarea>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-text-primary mb-2">Status</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">Status</label>
                   <select
                     value={formData().status}
                     onChange={(e) => updateField('status', e.currentTarget.value)}
-                    class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                    class="w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FF6600] transition-all"
                   >
                     <option value="planning">Planning</option>
                     <option value="in_progress">In Progress</option>
@@ -348,12 +348,12 @@ export function NewProjectForm() {
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-text-primary mb-2">Budget ($)</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">Budget ($)</label>
                   <input
                     type="number"
                     value={formData().budget}
                     onInput={(e) => updateField('budget', e.currentTarget.value)}
-                    class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                    class="w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FF6600] transition-all"
                     placeholder="0"
                     min="0"
                     step="1000"
@@ -362,50 +362,53 @@ export function NewProjectForm() {
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-text-primary mb-2">Location</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Location</label>
                 <input
                   type="text"
                   value={formData().location}
                   onInput={(e) => updateField('location', e.currentTarget.value)}
-                  class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                  class="w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FF6600] transition-all"
                   placeholder="Project location"
                 />
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-text-primary mb-2">Start Date *</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">Start Date *</label>
                   <input
                     type="date"
                     required
                     value={formData().startDate}
                     onInput={(e) => updateField('startDate', e.currentTarget.value)}
-                    class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                    class="w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FF6600] transition-all"
                   />
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-text-primary mb-2">End Date</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">End Date</label>
                   <input
                     type="date"
                     value={formData().endDate}
                     onInput={(e) => updateField('endDate', e.currentTarget.value)}
-                    class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                    class="w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FF6600] transition-all"
                   />
                 </div>
               </div>
 
-              <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+              <div class="flex justify-between items-center pt-6 border-t border-gray-700">
                 <a
                   href="/projects"
-                  class="bg-white hover:bg-gray-50 border border-gray-300 text-text-primary px-6 py-2.5 rounded font-medium transition-all"
+                  class="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white px-6 py-2.5 rounded font-medium transition-all"
                 >
                   Cancel
                 </a>
                 <button
                   type="submit"
                   disabled={isSubmitting()}
-                  class="bg-ca-orange hover:bg-ca-orange-dark disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded font-medium transition-all shadow-ca-sm hover:shadow-ca-md"
+                  class="disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded font-medium transition-all shadow-lg hover:opacity-90"
+                  style={{
+                    'background-color': isSubmitting() ? '#4B5563' : '#FF6600'
+                  }}
                 >
                   {isSubmitting() ? 'Creating...' : 'Create Project'}
                 </button>
@@ -413,14 +416,14 @@ export function NewProjectForm() {
           </form>
         }
       >
-          <div class="bg-white border border-status-success rounded shadow-ca-md p-8 text-center">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-status-success/10 mb-4">
-              <svg class="w-8 h-8 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="bg-gray-800 border border-[#3D9991] rounded-lg shadow-xl p-8 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#3D9991]/20 mb-4">
+              <svg class="w-8 h-8 text-[#3D9991]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>
-            <h3 class="text-xl font-semibold text-text-primary mb-2">Project Created Successfully!</h3>
-            <p class="text-text-secondary">Redirecting to projects page...</p>
+            <h3 class="text-xl font-semibold text-white mb-2">Project Created Successfully!</h3>
+            <p class="text-gray-400">Redirecting to projects page...</p>
           </div>
         </Show>
       </div>

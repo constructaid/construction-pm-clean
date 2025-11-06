@@ -194,7 +194,7 @@ const mockScheduleTasks: ScheduleTask[] = [
     freeFloat: 0,
     estimatedHours: 400,
     cost: 150000,
-    color: '#FF5E15',
+    color: '#FF6600',
     dependencies: [{ id: 2, predecessorTaskId: 3, dependencyType: 'finish_to_start', lagDays: 0 }]
   },
   {
@@ -228,7 +228,7 @@ const mockScheduleTasks: ScheduleTask[] = [
     freeFloat: 0,
     estimatedHours: 160,
     cost: 50000,
-    color: '#FF5E15',
+    color: '#FF6600',
     dependencies: [{ id: 3, predecessorTaskId: 3, dependencyType: 'finish_to_start', lagDays: 0 }]
   },
   {
@@ -262,7 +262,7 @@ const mockScheduleTasks: ScheduleTask[] = [
     freeFloat: 0,
     estimatedHours: 240,
     cost: 100000,
-    color: '#FF5E15',
+    color: '#FF6600',
     dependencies: [{ id: 4, predecessorTaskId: 5, dependencyType: 'finish_to_start', lagDays: 0 }]
   },
   {

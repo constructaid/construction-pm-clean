@@ -29,17 +29,17 @@ export default function ProjectHeader(props: ProjectHeaderProps) {
       const response = await fetch(`/api/projects/${props.projectId}`);
       const data = await response.json();
 
-      if (data.success && data.project) {
-        setProjectName(data.project.name);
-        setProjectNumber(data.project.projectNumber);
+      if (data.success && data.data?.project) {
+        setProjectName(data.data.project.name);
+        setProjectNumber(data.data.project.projectNumber);
       }
 
       // Load all projects for dropdown
       const projectsResponse = await fetch('/api/projects');
       const projectsData = await projectsResponse.json();
 
-      if (projectsData.success && projectsData.projects) {
-        setAllProjects(projectsData.projects);
+      if (projectsData.success && projectsData.data?.projects) {
+        setAllProjects(projectsData.data.projects);
       }
     } catch (error) {
       console.error('Error loading project:', error);

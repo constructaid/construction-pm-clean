@@ -1,0 +1,205 @@
+---
+/**
+ * AI Testing Page
+ * Quick test page to verify Ollama integration
+ * Visit: http://localhost:4321/ai-test
+ */
+import ChatWidget from '../components/chatbot/ChatWidget';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Test - ConstructAid</title>
+</head>
+<body class="bg-gray-950 text-white min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold mb-2">AI Integration Test Page</h1>
+        <p class="text-gray-400 mb-8">Test Ollama connection and chat functionality</p>
+
+        <!-- Status Section -->
+        <div class="bg-gray-900 rounded-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">System Status</h2>
+            <div id="status-container" class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <div id="ollama-status" class="w-3 h-3 rounded-full bg-gray-600 animate-pulse"></div>
+                    <span id="ollama-text" class="text-gray-400">Checking Ollama...</span>
+                </div>
+                <div id="models-list" class="ml-6 text-sm text-gray-500"></div>
+            </div>
+        </div>
+
+        <!-- Quick Tests -->
+        <div class="bg-gray-900 rounded-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Quick Tests</h2>
+            <div class="space-y-3">
+                <button
+                    id="test-kb"
+                    class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-left"
+                >
+                    <div class="font-semibold">Test Knowledge Base</div>
+                    <div class="text-sm text-blue-200">Search for construction knowledge</div>
+                </button>
+                <button
+                    id="test-chat"
+                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-left"
+                >
+                    <div class="font-semibold">Test Chat API</div>
+                    <div class="text-sm text-green-200">Send test question to AI</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="bg-gray-900 rounded-lg p-6">
+            <h2 class="text-2xl font-semibold mb-4">Test Results</h2>
+            <div id="test-results" class="space-y-4 text-sm">
+                <p class="text-gray-500">Run tests to see results here...</p>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mt-8 p-6 bg-blue-900/20 border border-blue-800 rounded-lg">
+            <h3 class="text-xl font-semibold mb-3">Setup Instructions</h3>
+            <ol class="list-decimal list-inside space-y-2 text-gray-300">
+                <li>Install Ollama: <a href="https://ollama.com/download" class="text-blue-400 underline">ollama.com/download</a></li>
+                <li>Pull model: <code class="bg-gray-800 px-2 py-1 rounded">ollama pull llama3.1:70b</code></li>
+                <li>Install Python deps: <code class="bg-gray-800 px-2 py-1 rounded">pip install sentence-transformers faiss-cpu numpy</code></li>
+                <li>Build knowledge base: <code class="bg-gray-800 px-2 py-1 rounded">python scripts/build-knowledge-base.py</code></li>
+                <li>Refresh this page to test!</li>
+            </ol>
+        </div>
+
+        <!-- Chat Widget Note -->
+        <div class="mt-8 p-6 bg-gray-900 rounded-lg text-center">
+            <p class="text-gray-400 mb-2">👉 Look for the <strong class="text-blue-400">blue chat button</strong> in the bottom-right corner!</p>
+            <p class="text-sm text-gray-500">Click it to open the AI assistant</p>
+        </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <ChatWidget client:load />
+
+    <script>
+        // Check Ollama status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/ai/chat');
+                const data = await response.json();
+
+                const statusDot = document.getElementById('ollama-status');
+                const statusText = document.getElementById('ollama-text');
+                const modelsList = document.getElementById('models-list');
+
+                if (data.status === 'online') {
+                    statusDot.className = 'w-3 h-3 rounded-full bg-green-500';
+                    statusText.textContent = 'Ollama is online and ready!';
+                    statusText.className = 'text-green-400 font-semibold';
+
+                    if (data.models && data.models.length > 0) {
+                        modelsList.innerHTML = `<strong>Available models:</strong> ${data.models.join(', ')}`;
+                        modelsList.className = 'ml-6 text-sm text-gray-400';
+                    }
+                } else {
+                    statusDot.className = 'w-3 h-3 rounded-full bg-red-500';
+                    statusText.textContent = 'Ollama is offline. Please start Ollama service.';
+                    statusText.className = 'text-red-400 font-semibold';
+                    modelsList.innerHTML = '<strong class="text-red-400">Run:</strong> <code class="bg-gray-800 px-2 py-1 rounded ml-2">ollama serve</code>';
+                }
+            } catch (error) {
+                const statusDot = document.getElementById('ollama-status');
+                const statusText = document.getElementById('ollama-text');
+
+                statusDot.className = 'w-3 h-3 rounded-full bg-red-500';
+                statusText.textContent = 'Error checking Ollama status';
+                statusText.className = 'text-red-400';
+            }
+        }
+
+        // Test Knowledge Base
+        document.getElementById('test-kb').addEventListener('click', async () => {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<p class="text-blue-400 animate-pulse">Testing knowledge base...</p>';
+
+            try {
+                // We'll test this via the chat API which calls the KB search
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: 'What is rebar spacing for 6-inch slab?'
+                    })
+                });
+
+                const data = await response.json();
+
+                results.innerHTML = `
+                    <div class="p-4 bg-green-900/30 border border-green-700 rounded">
+                        <p class="text-green-400 font-semibold mb-2">✓ Knowledge Base Test Passed</p>
+                        <p class="text-gray-300 mb-2"><strong>Question:</strong> What is rebar spacing for 6-inch slab?</p>
+                        <p class="text-gray-300 mb-2"><strong>Response:</strong></p>
+                        <p class="text-gray-400 whitespace-pre-wrap">${data.content}</p>
+                        ${data.sources && data.sources.length > 0 ? `
+                            <p class="text-gray-500 mt-3 text-xs">
+                                <strong>Sources found:</strong> ${data.sources.length}
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="p-4 bg-red-900/30 border border-red-700 rounded">
+                        <p class="text-red-400 font-semibold">✗ Knowledge Base Test Failed</p>
+                        <p class="text-gray-400 mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+
+        // Test Chat API
+        document.getElementById('test-chat').addEventListener('click', async () => {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<p class="text-blue-400 animate-pulse">Testing chat API...</p>';
+
+            try {
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: 'What are OSHA fall protection requirements?'
+                    })
+                });
+
+                const data = await response.json();
+
+                results.innerHTML = `
+                    <div class="p-4 bg-green-900/30 border border-green-700 rounded">
+                        <p class="text-green-400 font-semibold mb-2">✓ Chat API Test Passed</p>
+                        <p class="text-gray-300 mb-2"><strong>Question:</strong> What are OSHA fall protection requirements?</p>
+                        <p class="text-gray-300 mb-2"><strong>AI Response:</strong></p>
+                        <p class="text-gray-400 whitespace-pre-wrap">${data.content}</p>
+                        ${data.sources && data.sources.length > 0 ? `
+                            <div class="mt-3 text-xs text-gray-500">
+                                <strong>Sources:</strong>
+                                ${data.sources.map(s => `<div>📚 ${s.reference}</div>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="p-4 bg-red-900/30 border border-red-700 rounded">
+                        <p class="text-red-400 font-semibold">✗ Chat API Test Failed</p>
+                        <p class="text-gray-400 mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+
+        // Check status on load
+        checkStatus();
+    </script>
+</body>
+</html>

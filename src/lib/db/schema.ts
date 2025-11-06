@@ -71,6 +71,10 @@ export const projects = pgTable('projects', {
   createdBy: integer('created_by'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
 });
 
 // Tasks Table
@@ -104,6 +108,10 @@ export const tasks = pgTable('tasks', {
   createdBy: integer('created_by'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
 });
 
 // Document-related enums
@@ -144,6 +152,10 @@ export const rfis = pgTable('rfis', {
   // Metadata
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
 });
 
 // Change Orders Table
@@ -190,6 +202,10 @@ export const changeOrders = pgTable('change_orders', {
   // Metadata
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
 });
 
 // Daily Reports Table
@@ -228,6 +244,10 @@ export const dailyReports = pgTable('daily_reports', {
   submittedBy: integer('submitted_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
 });
 
 // Submittals Table
@@ -271,6 +291,10 @@ export const submittals = pgTable('submittals', {
   // Metadata
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Soft delete
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
 });
 
 // File/Document enums
@@ -288,6 +312,7 @@ export const folderTypeEnum = pgEnum('folder_type', [
   'meeting_minutes',
   'warranties',
   'closeout',
+  'estimates',
   'general'
 ]);
 
@@ -379,6 +404,980 @@ export const comments = pgTable('comments', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Project Invitations - Manage invitations to join projects
+export const invitationStatusEnum = pgEnum('invitation_status', ['pending', 'accepted', 'rejected', 'expired']);
+export const teamRoleEnum = pgEnum('team_role', ['owner', 'architect', 'engineer', 'general_contractor', 'subcontractor', 'supplier', 'inspector', 'consultant']);
+
+export const projectInvitations = pgTable('project_invitations', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Invitation details
+  invitationToken: varchar('invitation_token', { length: 255 }).notNull().unique(),
+  email: varchar('email', { length: 255 }).notNull(),
+  teamRole: teamRoleEnum('team_role').notNull(),
+
+  // Company and scope
+  companyName: varchar('company_name', { length: 255 }),
+  csiDivision: varchar('csi_division', { length: 10 }), // e.g., "03", "04"
+  divisionName: varchar('division_name', { length: 255 }), // e.g., "Concrete", "Masonry"
+  scopeOfWork: text('scope_of_work'),
+
+  // Invitation metadata
+  status: invitationStatusEnum('status').default('pending').notNull(),
+  message: text('message'), // Optional message from inviter
+
+  // Workflow
+  invitedBy: integer('invited_by').notNull(), // User ID who sent invite
+  invitedAt: timestamp('invited_at').defaultNow().notNull(),
+
+  // Response tracking
+  respondedAt: timestamp('responded_at'),
+  acceptedBy: integer('accepted_by'), // User ID who accepted (after signup/login)
+
+  // Access request (after accepting invitation)
+  accessRequested: boolean('access_requested').default(false),
+  accessRequestedAt: timestamp('access_requested_at'),
+
+  // Project Manager approval
+  accessApproved: boolean('access_approved').default(false),
+  approvedBy: integer('approved_by'), // PM user ID
+  approvedAt: timestamp('approved_at'),
+  rejectionReason: text('rejection_reason'),
+
+  // Expiration
+  expiresAt: timestamp('expires_at'), // Invitations expire after 7 days
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Project Team Members - Track team members and their access
+export const projectTeamMembers = pgTable('project_team_members', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+  userId: integer('user_id').notNull(),
+
+  // Role and division
+  teamRole: teamRoleEnum('team_role').notNull(),
+  csiDivision: varchar('csi_division', { length: 10 }),
+  divisionName: varchar('division_name', { length: 255 }),
+  scopeOfWork: text('scope_of_work'),
+
+  // Access control
+  canInviteOthers: boolean('can_invite_others').default(true), // Each team member can invite others to their role
+  accessLevel: varchar('access_level', { length: 50 }).default('standard'), // standard, admin, read_only
+
+  // Permissions - what they can see/do
+  permissions: jsonb('permissions').default('{}'), // {viewPlans: true, editSchedule: false, etc.}
+
+  // Status
+  isActive: boolean('is_active').default(true),
+  joinedAt: timestamp('joined_at').defaultNow().notNull(),
+  leftAt: timestamp('left_at'),
+
+  // Contact info (denormalized for quick access)
+  contactName: varchar('contact_name', { length: 255 }),
+  contactEmail: varchar('contact_email', { length: 255 }),
+  contactPhone: varchar('contact_phone', { length: 50 }),
+  companyName: varchar('company_name', { length: 255 }),
+
+  // Invitation source
+  invitationId: integer('invitation_id'), // Link back to invitation
+  invitedBy: integer('invited_by'), // User ID who invited them
+
+  // Metadata
+  notes: text('notes'),
+  tags: jsonb('tags').default('[]'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ========================================
+// SAFETY MANAGEMENT SYSTEM - DISD Compliance
+// ========================================
+
+// Safety-related enums
+export const safetyMeetingTypeEnum = pgEnum('safety_meeting_type', ['toolbox', 'committee', 'orientation', 'emergency']);
+export const incidentSeverityEnum = pgEnum('incident_severity', ['first_aid', 'recordable', 'lost_time', 'fatality', 'near_miss']);
+export const incidentTypeEnum = pgEnum('incident_type', ['injury', 'illness', 'property_damage', 'environmental', 'near_miss']);
+export const safetyInspectionTypeEnum = pgEnum('safety_inspection_type', ['daily', 'weekly', 'crane', 'scaffold', 'excavation', 'electrical', 'fire_prevention']);
+export const permitTypeEnum = pgEnum('permit_type', ['hot_work', 'confined_space', 'excavation', 'electrical', 'crane_lift']);
+export const trainingStatusEnum = pgEnum('training_status', ['scheduled', 'completed', 'expired', 'cancelled']);
+export const certificationStatusEnum = pgEnum('certification_status', ['active', 'expired', 'pending', 'revoked']);
+
+// Safety Action Plans - Site Safety Action Plan (Exhibit 4-1)
+export const safetyActionPlans = pgTable('safety_action_plans', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Plan identification
+  planNumber: varchar('plan_number', { length: 50 }).notNull().unique(),
+  title: varchar('title', { length: 255 }).notNull(),
+  version: integer('version').default(1).notNull(),
+
+  // Emergency contacts
+  bondSafetyDirector: varchar('bond_safety_director', { length: 255 }).default('214-435-2204'),
+  siteSupervisor: varchar('site_supervisor', { length: 255 }),
+  siteSupervisorPhone: varchar('site_supervisor_phone', { length: 50 }),
+  emergencyContact: varchar('emergency_contact', { length: 255 }),
+  emergencyPhone: varchar('emergency_phone', { length: 50 }),
+
+  // Plan details
+  hazardIdentification: jsonb('hazard_identification').default('[]'), // Array of identified hazards
+  controlMeasures: jsonb('control_measures').default('[]'), // Array of control measures
+  emergencyProcedures: text('emergency_procedures'),
+  evacuationPlan: text('evacuation_plan'),
+
+  // Site-specific requirements
+  siteRequirements: jsonb('site_requirements').default('{}'), // Fencing, signage, speed limits, etc.
+  ppe_requirements: jsonb('ppe_requirements').default('[]'), // Required PPE
+
+  // Status and approval
+  status: documentStatusEnum('status').default('draft').notNull(),
+  approvedBy: integer('approved_by'),
+  approvedAt: timestamp('approved_at'),
+
+  // Attachments
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Safety Meetings - Toolbox and Committee Meetings (Exhibit 7-1)
+export const safetyMeetings = pgTable('safety_meetings', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Meeting details
+  meetingNumber: varchar('meeting_number', { length: 50 }).notNull(),
+  meetingType: safetyMeetingTypeEnum('meeting_type').notNull(),
+  meetingDate: timestamp('meeting_date').notNull(),
+  duration: integer('duration').default(15), // Duration in minutes (minimum 15 for toolbox)
+
+  // Meeting content
+  topic: varchar('topic', { length: 255 }).notNull(),
+  agenda: text('agenda'),
+  discussion: text('discussion').notNull(),
+  actionItems: jsonb('action_items').default('[]'),
+
+  // Location
+  location: varchar('location', { length: 255 }),
+
+  // Attendance
+  attendees: jsonb('attendees').default('[]'), // Array of {name, company, signature, badgeNumber}
+  conductedBy: integer('conducted_by').notNull(),
+  conductorName: varchar('conductor_name', { length: 255 }),
+
+  // Compliance tracking
+  isMandatory: boolean('is_mandatory').default(true),
+  attendanceCount: integer('attendance_count').default(0),
+
+  // Attachments (photos, sign-in sheets, etc.)
+  attachments: jsonb('attachments').default('[]'),
+  signInSheet: text('sign_in_sheet'), // URL to scanned sign-in sheet
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Safety Inspections - Daily/Weekly Inspections (Exhibit 5-2)
+export const safetyInspections = pgTable('safety_inspections', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Inspection details
+  inspectionNumber: varchar('inspection_number', { length: 50 }).notNull(),
+  inspectionType: safetyInspectionTypeEnum('inspection_type').notNull(),
+  inspectionDate: timestamp('inspection_date').notNull(),
+
+  // Inspector
+  inspectedBy: integer('inspected_by').notNull(),
+  inspectorName: varchar('inspector_name', { length: 255 }),
+  inspectorCompany: varchar('inspector_company', { length: 255 }),
+
+  // Inspection areas
+  areasInspected: jsonb('areas_inspected').default('[]'), // Array of location names
+
+  // Checklist items (based on Exhibit 5-2)
+  checklistItems: jsonb('checklist_items').default('[]'), // Array of {item, status, notes, photo}
+  // Common items: housekeeping, scaffolding, ladders, fall protection, electrical, fire extinguishers,
+  // PPE compliance, signage, barricades, excavations, trenches
+
+  // Findings
+  violationsFound: integer('violations_found').default(0),
+  hazardsIdentified: jsonb('hazards_identified').default('[]'),
+  correctiveActions: jsonb('corrective_actions').default('[]'), // Array of {issue, action, assignedTo, dueDate, status}
+
+  // Weather conditions
+  weatherCondition: varchar('weather_condition', { length: 100 }),
+  temperature: varchar('temperature', { length: 50 }),
+
+  // Overall status
+  overallStatus: varchar('overall_status', { length: 50 }).default('pass'), // pass, fail, conditional
+  comments: text('comments'),
+
+  // Follow-up
+  requiresFollowUp: boolean('requires_follow_up').default(false),
+  followUpDate: timestamp('follow_up_date'),
+  followUpCompleted: boolean('follow_up_completed').default(false),
+
+  // Attachments (photos of violations, corrective actions)
+  photos: jsonb('photos').default('[]'),
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Incident Reports - Accident/Incident Reporting (Exhibit 6-1)
+export const incidentReports = pgTable('incident_reports', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Incident identification
+  incidentNumber: varchar('incident_number', { length: 50 }).notNull().unique(),
+  incidentType: incidentTypeEnum('incident_type').notNull(),
+  severity: incidentSeverityEnum('severity').notNull(),
+
+  // When and where
+  incidentDate: timestamp('incident_date').notNull(),
+  incidentTime: varchar('incident_time', { length: 20 }),
+  location: text('location').notNull(),
+  specificLocation: text('specific_location'), // Detailed location description
+
+  // Injured/affected party
+  injuredPartyName: varchar('injured_party_name', { length: 255 }),
+  injuredPartyCompany: varchar('injured_party_company', { length: 255 }),
+  injuredPartyTrade: varchar('injured_party_trade', { length: 100 }),
+  injuredPartyBadgeNumber: varchar('injured_party_badge_number', { length: 50 }),
+
+  // Incident description
+  description: text('description').notNull(),
+  whatHappened: text('what_happened').notNull(),
+  causeOfIncident: text('cause_of_incident'),
+  contributingFactors: jsonb('contributing_factors').default('[]'),
+
+  // Injury details (if applicable)
+  bodyPartAffected: varchar('body_part_affected', { length: 100 }),
+  injuryType: varchar('injury_type', { length: 100 }), // cut, bruise, fracture, burn, etc.
+  treatmentProvided: text('treatment_provided'),
+  medicalFacility: varchar('medical_facility', { length: 255 }),
+
+  // Work status impact
+  lostWorkDays: integer('lost_work_days').default(0),
+  restrictedWorkDays: integer('restricted_work_days').default(0),
+  returnToWorkDate: timestamp('return_to_work_date'),
+
+  // OSHA reporting
+  isOSHARecordable: boolean('is_osha_recordable').default(false),
+  osha300FormFiled: boolean('osha_300_form_filed').default(false),
+  osha300FormDate: timestamp('osha_300_form_date'),
+
+  // Witnesses
+  witnesses: jsonb('witnesses').default('[]'), // Array of {name, company, contact, statement}
+
+  // Investigation
+  investigatedBy: integer('investigated_by'),
+  investigatorName: varchar('investigator_name', { length: 255 }),
+  investigationDate: timestamp('investigation_date'),
+  investigationFindings: text('investigation_findings'),
+  rootCause: text('root_cause'),
+
+  // Corrective actions
+  immediateActions: text('immediate_actions'),
+  correctiveActions: jsonb('corrective_actions').default('[]'), // Array of {action, assignedTo, dueDate, status}
+  preventativeMeasures: text('preventative_measures'),
+
+  // Notifications
+  bondSafetyNotified: boolean('bond_safety_notified').default(false),
+  bondSafetyNotifiedAt: timestamp('bond_safety_notified_at'),
+  ownerNotified: boolean('owner_notified').default(false),
+  ownerNotifiedAt: timestamp('owner_notified_at'),
+  oshaNotified: boolean('osha_notified').default(false),
+  oshaNotifiedAt: timestamp('osha_notified_at'),
+
+  // Attachments (photos, witness statements, medical reports)
+  photos: jsonb('photos').default('[]'),
+  attachments: jsonb('attachments').default('[]'),
+
+  // Status
+  status: documentStatusEnum('status').default('draft').notNull(),
+  closedAt: timestamp('closed_at'),
+
+  // Metadata
+  reportedBy: integer('reported_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Job Hazard Analysis - JHA Worksheets (Exhibit 5-6)
+export const jobHazardAnalyses = pgTable('job_hazard_analyses', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // JHA identification
+  jhaNumber: varchar('jha_number', { length: 50 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+
+  // Job details
+  jobDescription: text('job_description').notNull(),
+  location: varchar('location', { length: 255 }),
+  equipmentRequired: jsonb('equipment_required').default('[]'),
+
+  // Personnel
+  preparedBy: integer('prepared_by').notNull(),
+  preparedByName: varchar('prepared_by_name', { length: 255 }),
+  reviewedBy: integer('reviewed_by'),
+  reviewedByName: varchar('reviewed_by_name', { length: 255 }),
+  approvedBy: integer('approved_by'),
+  approvedByName: varchar('approved_by_name', { length: 255 }),
+
+  // Job steps and hazards
+  jobSteps: jsonb('job_steps').default('[]'), // Array of {step, hazards, controls, ppe}
+  // Each step includes: sequence number, task description, potential hazards, control measures, required PPE
+
+  // Required PPE
+  requiredPPE: jsonb('required_ppe').default('[]'),
+
+  // Training requirements
+  trainingRequired: jsonb('training_required').default('[]'),
+
+  // Permits required
+  permitsRequired: jsonb('permits_required').default('[]'), // hot work, confined space, etc.
+
+  // Emergency procedures
+  emergencyProcedures: text('emergency_procedures'),
+
+  // Status and dates
+  status: documentStatusEnum('status').default('draft').notNull(),
+  effectiveDate: timestamp('effective_date'),
+  expirationDate: timestamp('expiration_date'),
+  reviewDate: timestamp('review_date'), // JHAs should be reviewed annually
+
+  // Attachments
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Work Permits - Hot Work, Confined Space, etc. (Exhibit 5-4)
+export const workPermits = pgTable('work_permits', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Permit details
+  permitNumber: varchar('permit_number', { length: 50 }).notNull().unique(),
+  permitType: permitTypeEnum('permit_type').notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+
+  // Work details
+  workDescription: text('work_description').notNull(),
+  location: text('location').notNull(),
+  contractorCompany: varchar('contractor_company', { length: 255 }),
+
+  // Dates and times
+  permitDate: timestamp('permit_date').notNull(),
+  startDate: timestamp('start_date').notNull(),
+  endDate: timestamp('end_date').notNull(),
+  startTime: varchar('start_time', { length: 20 }),
+  endTime: varchar('end_time', { length: 20 }),
+
+  // Personnel
+  requestedBy: integer('requested_by').notNull(),
+  requestedByName: varchar('requested_by_name', { length: 255 }),
+  authorizedBy: integer('authorized_by'),
+  authorizedByName: varchar('authorized_by_name', { length: 255 }),
+  fireWatch: varchar('fire_watch', { length: 255 }), // For hot work permits
+
+  // Safety checklist (specific to permit type)
+  safetyChecklist: jsonb('safety_checklist').default('[]'), // Array of {item, checked, notes}
+  // Hot work: fire extinguisher, combustibles removed, fire watch assigned, etc.
+  // Confined space: atmospheric testing, ventilation, rescue plan, etc.
+
+  // Hazards and precautions
+  identifiedHazards: jsonb('identified_hazards').default('[]'),
+  precautions: jsonb('precautions').default('[]'),
+
+  // Required PPE and equipment
+  requiredPPE: jsonb('required_ppe').default('[]'),
+  requiredEquipment: jsonb('required_equipment').default('[]'),
+
+  // Emergency procedures
+  emergencyContact: varchar('emergency_contact', { length: 255 }),
+  emergencyPhone: varchar('emergency_phone', { length: 50 }),
+  emergencyProcedures: text('emergency_procedures'),
+
+  // Status
+  status: varchar('status', { length: 50 }).default('pending'), // pending, approved, in_progress, completed, cancelled
+  isActive: boolean('is_active').default(false),
+
+  // Completion
+  completedAt: timestamp('completed_at'),
+  completedBy: integer('completed_by'),
+  completionNotes: text('completion_notes'),
+
+  // Extensions
+  extended: boolean('extended').default(false),
+  extensionReason: text('extension_reason'),
+  originalEndDate: timestamp('original_end_date'),
+
+  // Attachments
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Crane Inspections - Crane Inspection Records (Exhibit 5-3)
+export const craneInspections = pgTable('crane_inspections', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Inspection details
+  inspectionNumber: varchar('inspection_number', { length: 50 }).notNull(),
+  inspectionDate: timestamp('inspection_date').notNull(),
+  inspectionType: varchar('inspection_type', { length: 50 }).notNull(), // daily, weekly, monthly, annual, pre-lift
+
+  // Crane details
+  craneId: varchar('crane_id', { length: 100 }),
+  craneType: varchar('crane_type', { length: 100 }), // tower, mobile, overhead, etc.
+  manufacturer: varchar('manufacturer', { length: 100 }),
+  model: varchar('model', { length: 100 }),
+  serialNumber: varchar('serial_number', { length: 100 }),
+  capacity: varchar('capacity', { length: 50 }), // e.g., "50 tons"
+
+  // Operator
+  operatorName: varchar('operator_name', { length: 255 }).notNull(),
+  operatorCertification: varchar('operator_certification', { length: 100 }),
+  operatorCertExpiration: timestamp('operator_cert_expiration'),
+
+  // Inspector
+  inspectedBy: integer('inspected_by').notNull(),
+  inspectorName: varchar('inspector_name', { length: 255 }),
+  inspectorCertification: varchar('inspector_certification', { length: 100 }),
+
+  // Inspection checklist
+  inspectionItems: jsonb('inspection_items').default('[]'), // Array of {component, status, notes}
+  // Items: wire rope, hooks, brakes, controls, hydraulics, electrical, load charts, safety devices, etc.
+
+  // Load test (if applicable)
+  loadTestPerformed: boolean('load_test_performed').default(false),
+  loadTestWeight: varchar('load_test_weight', { length: 50 }),
+  loadTestResult: varchar('load_test_result', { length: 50 }),
+
+  // Findings
+  deficienciesFound: integer('deficiencies_found').default(0),
+  deficiencies: jsonb('deficiencies').default('[]'), // Array of {item, severity, action}
+  correctiveActions: jsonb('corrective_actions').default('[]'),
+
+  // Results
+  overallStatus: varchar('overall_status', { length: 50 }).default('pass'), // pass, fail, conditional
+  safeToOperate: boolean('safe_to_operate').default(true),
+
+  // Follow-up
+  requiresFollowUp: boolean('requires_follow_up').default(false),
+  followUpDate: timestamp('follow_up_date'),
+  takenOutOfService: boolean('taken_out_of_service').default(false),
+
+  // Comments
+  comments: text('comments'),
+
+  // Attachments (photos, test results, certifications)
+  photos: jsonb('photos').default('[]'),
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Safety Training Records
+export const safetyTraining = pgTable('safety_training', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Training details
+  trainingNumber: varchar('training_number', { length: 50 }).notNull(),
+  trainingType: varchar('training_type', { length: 100 }).notNull(), // OSHA 10, OSHA 30, Scaffold, Fall Protection, etc.
+  trainingTitle: varchar('training_title', { length: 255 }).notNull(),
+  description: text('description'),
+
+  // Training delivery
+  trainingDate: timestamp('training_date').notNull(),
+  duration: integer('duration'), // Duration in hours
+  location: varchar('location', { length: 255 }),
+  trainer: varchar('trainer', { length: 255 }),
+  trainerCertification: varchar('trainer_certification', { length: 100 }),
+
+  // Attendees
+  attendees: jsonb('attendees').default('[]'), // Array of {userId, name, company, signature, testScore}
+  attendanceCount: integer('attendance_count').default(0),
+
+  // Content
+  topicsCovered: jsonb('topics_covered').default('[]'),
+  materialsProvided: jsonb('materials_provided').default('[]'),
+
+  // Assessment
+  testRequired: boolean('test_required').default(false),
+  passingScore: integer('passing_score').default(70),
+
+  // Certification
+  certificateIssued: boolean('certificate_issued').default(false),
+  certificateValidityPeriod: integer('certificate_validity_period'), // In months
+
+  // Status
+  status: trainingStatusEnum('status').default('completed').notNull(),
+
+  // Attachments (training materials, certificates, sign-in sheets)
+  attachments: jsonb('attachments').default('[]'),
+  signInSheet: text('sign_in_sheet'),
+
+  // Metadata
+  conductedBy: integer('conducted_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Worker Certifications and Badges - Track DISD badge requirements
+export const workerCertifications = pgTable('worker_certifications', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Worker details
+  workerName: varchar('worker_name', { length: 255 }).notNull(),
+  workerEmail: varchar('worker_email', { length: 255 }),
+  workerPhone: varchar('worker_phone', { length: 50 }),
+  company: varchar('company', { length: 255 }).notNull(),
+  trade: varchar('trade', { length: 100 }),
+
+  // Badge information
+  badgeNumber: varchar('badge_number', { length: 50 }).notNull().unique(),
+  badgeIssueDate: timestamp('badge_issue_date').notNull(),
+  badgeExpirationDate: timestamp('badge_expiration_date'),
+  badgePhotoUrl: text('badge_photo_url'),
+
+  // Background check and clearance
+  backgroundCheckCompleted: boolean('background_check_completed').default(false),
+  backgroundCheckDate: timestamp('background_check_date'),
+  backgroundCheckStatus: varchar('background_check_status', { length: 50 }),
+
+  // Certifications
+  certifications: jsonb('certifications').default('[]'), // Array of {type, number, issueDate, expirationDate, issuer}
+  // OSHA 10, OSHA 30, CPR/First Aid, Scaffold, Forklift, etc.
+
+  // Training records
+  trainingCompleted: jsonb('training_completed').default('[]'), // Array of training IDs
+
+  // Safety record
+  incidentsInvolved: integer('incidents_involved').default(0),
+  violationsRecorded: integer('violations_recorded').default(0),
+  lastIncidentDate: timestamp('last_incident_date'),
+
+  // Access control
+  siteAccessAuthorized: boolean('site_access_authorized').default(false),
+  accessLevel: varchar('access_level', { length: 50 }).default('standard'),
+  accessRestrictions: jsonb('access_restrictions').default('[]'),
+
+  // Status
+  status: certificationStatusEnum('status').default('active').notNull(),
+  isActive: boolean('is_active').default(true),
+  deactivatedAt: timestamp('deactivated_at'),
+  deactivationReason: text('deactivation_reason'),
+
+  // Attachments (certifications, photos, documents)
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ========================================
+// FIELD SUPERINTENDENT COORDINATION & COMPLIANCE
+// ========================================
+
+// Field Activity enums
+export const fieldInspectionTypeEnum = pgEnum('field_inspection_type', [
+  'foundation',
+  'framing',
+  'plumbing',
+  'electrical',
+  'hvac',
+  'drywall',
+  'final',
+  'punch_list',
+  'code_compliance',
+  'disd_safety'
+]);
+
+export const complianceStatusEnum = pgEnum('compliance_status', [
+  'compliant',
+  'non_compliant',
+  'pending',
+  'requires_attention'
+]);
+
+export const deliveryStatusEnum = pgEnum('delivery_status', [
+  'scheduled',
+  'delivered',
+  'partial',
+  'delayed',
+  'cancelled'
+]);
+
+// Field Inspections Log - Track all field inspections
+export const fieldInspections = pgTable('field_inspections', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Inspection details
+  inspectionNumber: varchar('inspection_number', { length: 50 }).notNull(),
+  inspectionType: fieldInspectionTypeEnum('inspection_type').notNull(),
+  inspectionDate: timestamp('inspection_date').notNull(),
+  inspectionTime: varchar('inspection_time', { length: 20 }),
+
+  // Location
+  area: varchar('area', { length: 255 }).notNull(),
+  specificLocation: text('specific_location'),
+
+  // Inspector
+  inspectorName: varchar('inspector_name', { length: 255 }).notNull(),
+  inspectorCompany: varchar('inspector_company', { length: 255 }),
+  inspectorLicense: varchar('inspector_license', { length: 100 }),
+
+  // Scope
+  scopeOfInspection: text('scope_of_inspection').notNull(),
+  workInspected: text('work_inspected'),
+  contractorPresent: varchar('contractor_present', { length: 255 }),
+
+  // Results
+  status: varchar('status', { length: 50 }).default('pending'), // passed, failed, conditional, pending
+  findings: jsonb('findings').default('[]'), // Array of {item, status, notes, action_required}
+  deficienciesFound: integer('deficiencies_found').default(0),
+  correctiveActions: jsonb('corrective_actions').default('[]'),
+
+  // Compliance tracking
+  codeRequirements: jsonb('code_requirements').default('[]'),
+  disdRequirements: jsonb('disd_requirements').default('[]'),
+  passedItems: integer('passed_items').default(0),
+  failedItems: integer('failed_items').default(0),
+
+  // Follow-up
+  requiresReinspection: boolean('requires_reinspection').default(false),
+  reinspectionDate: timestamp('reinspection_date'),
+  reinspectionCompleted: boolean('reinspection_completed').default(false),
+
+  // Documentation
+  photos: jsonb('photos').default('[]'),
+  attachments: jsonb('attachments').default('[]'),
+  inspectionReport: text('inspection_report'),
+
+  // Notes
+  inspectorNotes: text('inspector_notes'),
+  contractorNotes: text('contractor_notes'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Material Deliveries & Coordination
+export const materialDeliveries = pgTable('material_deliveries', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Delivery identification
+  deliveryNumber: varchar('delivery_number', { length: 50 }).notNull(),
+  purchaseOrder: varchar('purchase_order', { length: 100 }),
+
+  // Material details
+  materialDescription: text('material_description').notNull(),
+  quantity: varchar('quantity', { length: 100 }).notNull(),
+  unit: varchar('unit', { length: 50 }), // e.g., yards, tons, each
+
+  // Supplier
+  supplier: varchar('supplier', { length: 255 }).notNull(),
+  supplierContact: varchar('supplier_contact', { length: 255 }),
+  supplierPhone: varchar('supplier_phone', { length: 50 }),
+
+  // Delivery schedule
+  scheduledDate: timestamp('scheduled_date').notNull(),
+  scheduledTime: varchar('scheduled_time', { length: 50 }),
+  actualDeliveryDate: timestamp('actual_delivery_date'),
+  actualDeliveryTime: varchar('actual_delivery_time', { length: 50 }),
+
+  // Location
+  deliveryLocation: text('delivery_location').notNull(),
+  storageLocation: varchar('storage_location', { length: 255 }),
+
+  // Status
+  status: deliveryStatusEnum('status').default('scheduled').notNull(),
+
+  // Receiving
+  receivedBy: varchar('received_by', { length: 255 }),
+  receivedDate: timestamp('received_date'),
+  quantityReceived: varchar('quantity_received', { length: 100 }),
+
+  // Quality check
+  qualityInspection: boolean('quality_inspection').default(false),
+  inspectionNotes: text('inspection_notes'),
+  damageReported: boolean('damage_reported').default(false),
+  damageDescription: text('damage_description'),
+
+  // Documentation
+  deliveryTicket: text('delivery_ticket'), // URL to delivery ticket
+  photos: jsonb('photos').default('[]'),
+  attachments: jsonb('attachments').default('[]'),
+
+  // Coordination
+  coordinatedWith: jsonb('coordinated_with').default('[]'), // Array of {name, role, company}
+  specialInstructions: text('special_instructions'),
+
+  // Notes
+  notes: text('notes'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// DISD Compliance Checklists - Daily/Weekly compliance tracking
+export const disdComplianceChecklists = pgTable('disd_compliance_checklists', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Checklist details
+  checklistNumber: varchar('checklist_number', { length: 50 }).notNull(),
+  checklistDate: timestamp('checklist_date').notNull(),
+  checklistType: varchar('checklist_type', { length: 50 }).notNull(), // daily, weekly, monthly
+
+  // Completed by
+  completedBy: varchar('completed_by', { length: 255 }).notNull(),
+  completedByRole: varchar('completed_by_role', { length: 100 }),
+
+  // Safety compliance
+  safetyMeetingCurrent: boolean('safety_meeting_current').default(false),
+  safetyInspectionCurrent: boolean('safety_inspection_current').default(false),
+  allWorkersBadged: boolean('all_workers_badged').default(false),
+  ppeCompliance: boolean('ppe_compliance').default(false),
+  emergencyContactsPosted: boolean('emergency_contacts_posted').default(false),
+
+  // Site compliance
+  siteClean: boolean('site_clean').default(false),
+  barricadesProper: boolean('barricades_proper').default(false),
+  signageCompliant: boolean('signage_compliant').default(false),
+  fireExtinguishersChecked: boolean('fire_extinguishers_checked').default(false),
+  firstAidKitStocked: boolean('first_aid_kit_stocked').default(false),
+
+  // Documentation compliance
+  dailyReportSubmitted: boolean('daily_report_submitted').default(false),
+  permitsCurrent: boolean('permits_current').default(false),
+  insuranceCurrent: boolean('insurance_current').default(false),
+  trainingRecordsCurrent: boolean('training_records_current').default(false),
+
+  // Work area compliance
+  scaffoldInspected: boolean('scaffold_inspected').default(false),
+  laddersInspected: boolean('ladders_inspected').default(false),
+  electricalSafe: boolean('electrical_safe').default(false),
+  excavationsSafe: boolean('excavations_safe').default(false),
+  fallProtectionInPlace: boolean('fall_protection_in_place').default(false),
+
+  // Custom checklist items
+  additionalItems: jsonb('additional_items').default('[]'), // Array of {item, checked, notes}
+
+  // Issues and corrective actions
+  issuesIdentified: jsonb('issues_identified').default('[]'),
+  correctiveActions: jsonb('corrective_actions').default('[]'),
+
+  // Overall status
+  overallCompliance: complianceStatusEnum('overall_compliance').default('pending'),
+  complianceScore: integer('compliance_score').default(0), // Percentage
+
+  // Notes
+  notes: text('notes'),
+
+  // Photos
+  photos: jsonb('photos').default('[]'),
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Subcontractor Coordination Log
+export const subcontractorCoordination = pgTable('subcontractor_coordination', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Entry details
+  logNumber: varchar('log_number', { length: 50 }).notNull(),
+  logDate: timestamp('log_date').notNull(),
+
+  // Subcontractor
+  subcontractorName: varchar('subcontractor_name', { length: 255 }).notNull(),
+  trade: varchar('trade', { length: 100 }).notNull(),
+  superintendentName: varchar('superintendent_name', { length: 255 }),
+  contactPhone: varchar('contact_phone', { length: 50 }),
+
+  // Work coordination
+  workScheduled: text('work_scheduled').notNull(),
+  workArea: varchar('work_area', { length: 255 }),
+  scheduledStartDate: timestamp('scheduled_start_date'),
+  scheduledEndDate: timestamp('scheduled_end_date'),
+  crewSize: integer('crew_size'),
+
+  // Prerequisites
+  prerequisitesComplete: boolean('prerequisites_complete').default(false),
+  prerequisites: jsonb('prerequisites').default('[]'), // Array of {item, complete, notes}
+
+  // Material/equipment needs
+  materialsNeeded: jsonb('materials_needed').default('[]'),
+  equipmentNeeded: jsonb('equipment_needed').default('[]'),
+  siteSupportNeeded: jsonb('site_support_needed').default('[]'),
+
+  // Compliance
+  insuranceVerified: boolean('insurance_verified').default(false),
+  workersBadged: boolean('workers_badged').default(false),
+  safetyOrientationComplete: boolean('safety_orientation_complete').default(false),
+
+  // Conflicts/issues
+  schedulingConflicts: text('scheduling_conflicts'),
+  accessIssues: text('access_issues'),
+  coordinationNotes: text('coordination_notes'),
+
+  // Status
+  status: varchar('status', { length: 50 }).default('scheduled'), // scheduled, in_progress, complete, delayed, cancelled
+
+  // Completion
+  actualStartDate: timestamp('actual_start_date'),
+  actualEndDate: timestamp('actual_end_date'),
+  workCompleted: text('work_completed'),
+  inspectionRequired: boolean('inspection_required').default(false),
+  inspectionCompleted: boolean('inspection_completed').default(false),
+
+  // Documentation
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Superintendent Notes & Action Items
+export const superintendentNotes = pgTable('superintendent_notes', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull(),
+
+  // Note details
+  noteNumber: varchar('note_number', { length: 50 }).notNull(),
+  noteDate: timestamp('note_date').notNull(),
+
+  // Category
+  category: varchar('category', { length: 100 }).notNull(), // coordination, safety, quality, schedule, procurement, etc.
+  priority: taskPriorityEnum('priority').default('medium'),
+
+  // Content
+  subject: varchar('subject', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+
+  // Action item
+  isActionItem: boolean('is_action_item').default(false),
+  assignedTo: varchar('assigned_to', { length: 255 }),
+  dueDate: timestamp('due_date'),
+  status: varchar('status', { length: 50 }).default('open'), // open, in_progress, completed, cancelled
+
+  // Related entities
+  relatedEntity: varchar('related_entity', { length: 50 }), // 'inspection', 'delivery', 'safety_meeting', etc.
+  relatedEntityId: integer('related_entity_id'),
+
+  // Follow-up
+  requiresFollowUp: boolean('requires_follow_up').default(false),
+  followUpDate: timestamp('follow_up_date'),
+  followUpNotes: text('follow_up_notes'),
+
+  // Completion
+  completedAt: timestamp('completed_at'),
+  completionNotes: text('completion_notes'),
+
+  // Attachments
+  attachments: jsonb('attachments').default('[]'),
+
+  // Metadata
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ========================================
+// END FIELD SUPERINTENDENT COORDINATION
+// ========================================
+
+// ========================================
+// AUDIT LOG
+// ========================================
+
+// Audit action enum
+export const auditActionEnum = pgEnum('audit_action', ['CREATE', 'UPDATE', 'DELETE', 'RESTORE']);
+
+// Audit Log Table - tracks all create, update, delete, restore operations
+export const auditLog = pgTable('audit_log', {
+  id: serial('id').primaryKey(),
+
+  // What happened
+  action: auditActionEnum('action').notNull(),
+  tableName: varchar('table_name', { length: 100 }).notNull(),
+  recordId: integer('record_id').notNull(),
+
+  // Who did it
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: varchar('user_email', { length: 255 }), // Denormalized for record keeping
+  userRole: varchar('user_role', { length: 50 }),
+
+  // When it happened
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+
+  // Request context
+  ipAddress: varchar('ip_address', { length: 45 }), // IPv6 compatible
+  userAgent: text('user_agent'),
+  endpoint: varchar('endpoint', { length: 255 }), // API endpoint that was called
+
+  // What changed
+  changes: jsonb('changes'), // For UPDATE: { field: { old: 'value', new: 'value' } }
+  oldValues: jsonb('old_values'), // For DELETE/UPDATE: complete old record
+  newValues: jsonb('new_values'), // For CREATE/UPDATE: complete new record
+
+  // Additional context
+  notes: text('notes'), // Optional notes or reason for change
+
+  // Metadata
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ========================================
+// END AUDIT LOG
+// ========================================
+
 // Type exports for TypeScript
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -400,3 +1399,298 @@ export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
+export type ProjectInvitation = typeof projectInvitations.$inferSelect;
+export type NewProjectInvitation = typeof projectInvitations.$inferInsert;
+export type ProjectTeamMember = typeof projectTeamMembers.$inferSelect;
+export type NewProjectTeamMember = typeof projectTeamMembers.$inferInsert;
+
+// Safety system type exports
+export type SafetyActionPlan = typeof safetyActionPlans.$inferSelect;
+export type NewSafetyActionPlan = typeof safetyActionPlans.$inferInsert;
+export type SafetyMeeting = typeof safetyMeetings.$inferSelect;
+export type NewSafetyMeeting = typeof safetyMeetings.$inferInsert;
+export type SafetyInspection = typeof safetyInspections.$inferSelect;
+export type NewSafetyInspection = typeof safetyInspections.$inferInsert;
+export type IncidentReport = typeof incidentReports.$inferSelect;
+export type NewIncidentReport = typeof incidentReports.$inferInsert;
+export type JobHazardAnalysis = typeof jobHazardAnalyses.$inferSelect;
+export type NewJobHazardAnalysis = typeof jobHazardAnalyses.$inferInsert;
+export type WorkPermit = typeof workPermits.$inferSelect;
+export type NewWorkPermit = typeof workPermits.$inferInsert;
+export type CraneInspection = typeof craneInspections.$inferSelect;
+export type NewCraneInspection = typeof craneInspections.$inferInsert;
+export type SafetyTraining = typeof safetyTraining.$inferSelect;
+export type NewSafetyTraining = typeof safetyTraining.$inferInsert;
+export type WorkerCertification = typeof workerCertifications.$inferSelect;
+export type NewWorkerCertification = typeof workerCertifications.$inferInsert;
+
+// Field superintendent system type exports
+export type FieldInspection = typeof fieldInspections.$inferSelect;
+export type NewFieldInspection = typeof fieldInspections.$inferInsert;
+export type MaterialDelivery = typeof materialDeliveries.$inferSelect;
+export type NewMaterialDelivery = typeof materialDeliveries.$inferInsert;
+export type DisdComplianceChecklist = typeof disdComplianceChecklists.$inferSelect;
+export type NewDisdComplianceChecklist = typeof disdComplianceChecklists.$inferInsert;
+export type SubcontractorCoordination = typeof subcontractorCoordination.$inferSelect;
+export type NewSubcontractorCoordination = typeof subcontractorCoordination.$inferInsert;
+export type SuperintendentNote = typeof superintendentNotes.$inferSelect;
+export type NewSuperintendentNote = typeof superintendentNotes.$inferInsert;
+
+// ==================== BIDDING / ESTIMATING SYSTEM ====================
+
+// Enums for bidding
+export const bidStatusEnum = pgEnum('bid_status', [
+  'draft',
+  'in_preparation',
+  'submitted',
+  'under_review',
+  'awarded',
+  'not_awarded',
+  'withdrawn',
+  'expired',
+]);
+
+export const bidTypeEnum = pgEnum('bid_type', [
+  'public_competitive',      // Public sector competitive bidding
+  'public_design_build',     // Public design-build
+  'private_negotiated',      // Private sector negotiated
+  'private_competitive',     // Private competitive
+  'cm_at_risk',             // Construction Manager at Risk
+]);
+
+export const estimateStatusEnum = pgEnum('estimate_status', [
+  'draft',
+  'in_progress',
+  'under_review',
+  'approved',
+  'rejected',
+  'finalized',
+]);
+
+// Bid Packages (for each project bidding opportunity)
+export const bidPackages = pgTable('bid_packages', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id),
+
+  // Bid Information
+  bidNumber: varchar('bid_number', { length: 100 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  bidType: bidTypeEnum('bid_type').notNull(),
+  status: bidStatusEnum('status').default('draft').notNull(),
+
+  // Project Entity (Public vs Private)
+  ownerType: varchar('owner_type', { length: 50 }), // 'public', 'private'
+  ownerName: varchar('owner_name', { length: 255 }),
+  ownerContact: jsonb('owner_contact'), // {name, email, phone, address}
+
+  // Bidding Requirements (DISD/Public specific)
+  requiresMWBE: boolean('requires_mwbe').default(false), // M/WBE participation
+  mwbeGoalPercentage: integer('mwbe_goal_percentage'), // M/WBE goal %
+  requiresBidBond: boolean('requires_bid_bond').default(true),
+  requiresPerformanceBond: boolean('requires_performance_bond').default(true),
+  requiresPaymentBond: boolean('requires_payment_bond').default(true),
+  requiresPrequalification: boolean('requires_prequalification').default(false),
+
+  // Important Dates
+  bidIssueDate: timestamp('bid_issue_date'),
+  preBidMeetingDate: timestamp('pre_bid_meeting_date'),
+  questionsDeadline: timestamp('questions_deadline'),
+  bidDueDate: timestamp('bid_due_date').notNull(),
+  projectStartDate: timestamp('project_start_date'),
+  substantialCompletionDate: timestamp('substantial_completion_date'),
+
+  // Bid Submission Details
+  submissionLocation: text('submission_location'),
+  submissionMethod: varchar('submission_method', { length: 100 }), // 'physical', 'electronic', 'both'
+  numberOfCopiesRequired: integer('number_of_copies_required'),
+
+  // Contract Information
+  contractType: varchar('contract_type', { length: 100 }), // 'AIA A101', 'AIA A133', 'Custom'
+  estimatedContractValue: integer('estimated_contract_value'),
+  projectDuration: integer('project_duration'), // in days
+
+  // Documents
+  specificationSections: jsonb('specification_sections'), // Array of CSI divisions included
+  planSheets: jsonb('plan_sheets'), // Array of plan sheet references
+  addenda: jsonb('addenda'), // Array of addenda references
+
+  // Metadata
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Cost Estimates (Main estimate for a bid)
+export const costEstimates = pgTable('cost_estimates', {
+  id: serial('id').primaryKey(),
+  bidPackageId: integer('bid_package_id').references(() => bidPackages.id),
+  projectId: integer('project_id').notNull().references(() => projects.id),
+
+  // Estimate Information
+  estimateNumber: varchar('estimate_number', { length: 100 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  version: integer('version').default(1),
+  status: estimateStatusEnum('status').default('draft').notNull(),
+
+  // Cost Summary
+  subtotalCost: integer('subtotal_cost').default(0), // Sum of all line items
+  generalConditions: integer('general_conditions').default(0),
+  overhead: integer('overhead').default(0),
+  overheadPercentage: integer('overhead_percentage').default(10), // 10%
+  profit: integer('profit').default(0),
+  profitPercentage: integer('profit_percentage').default(8), // 8%
+  bondCost: integer('bond_cost').default(0),
+  bondPercentage: integer('bond_percentage').default(2), // 2%
+  contingency: integer('contingency').default(0),
+  contingencyPercentage: integer('contingency_percentage').default(5), // 5%
+  totalEstimatedCost: integer('total_estimated_cost').default(0),
+
+  // Metadata
+  notes: text('notes'),
+  assumptions: text('assumptions'),
+  exclusions: text('exclusions'),
+  estimatedBy: integer('estimated_by').references(() => users.id),
+  reviewedBy: integer('reviewed_by').references(() => users.id),
+  approvedBy: integer('approved_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Cost Estimate Line Items (CSI Division-based)
+export const costEstimateLineItems = pgTable('cost_estimate_line_items', {
+  id: serial('id').primaryKey(),
+  costEstimateId: integer('cost_estimate_id').notNull().references(() => costEstimates.id),
+
+  // CSI Classification
+  csiDivision: varchar('csi_division', { length: 10 }).notNull(), // '03', '04', '05', etc.
+  csiSection: varchar('csi_section', { length: 20 }), // '03 30 00' (detailed code)
+  description: text('description').notNull(),
+
+  // Cost Breakdown
+  quantity: integer('quantity').default(1),
+  unit: varchar('unit', { length: 50 }), // 'SF', 'LF', 'EA', 'CY', etc.
+  unitCost: integer('unit_cost').default(0), // in cents
+  laborCost: integer('labor_cost').default(0),
+  materialCost: integer('material_cost').default(0),
+  equipmentCost: integer('equipment_cost').default(0),
+  subcontractorCost: integer('subcontractor_cost').default(0),
+  totalCost: integer('total_cost').default(0),
+
+  // Additional Info
+  notes: text('notes'),
+  takeoffReference: text('takeoff_reference'), // Reference to plans/sheets
+  vendorQuote: varchar('vendor_quote', { length: 255 }), // Vendor or sub quote reference
+
+  // Metadata
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Bid Checklist (Track required documents and submissions)
+export const bidChecklists = pgTable('bid_checklists', {
+  id: serial('id').primaryKey(),
+  bidPackageId: integer('bid_package_id').notNull().references(() => bidPackages.id),
+
+  // Checklist Item
+  itemCategory: varchar('item_category', { length: 100 }).notNull(), // 'forms', 'bonds', 'references', 'technical', 'mwbe'
+  itemName: varchar('item_name', { length: 255 }).notNull(),
+  description: text('description'),
+  isRequired: boolean('is_required').default(true),
+  isCompleted: boolean('is_completed').default(false),
+
+  // Completion Details
+  completedBy: integer('completed_by').references(() => users.id),
+  completedAt: timestamp('completed_at'),
+  documentPath: text('document_path'), // Path to uploaded document
+  notes: text('notes'),
+
+  // Metadata
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Subcontractor Quotes (for estimate line items)
+export const subcontractorQuotes = pgTable('subcontractor_quotes', {
+  id: serial('id').primaryKey(),
+  bidPackageId: integer('bid_package_id').references(() => bidPackages.id),
+  costEstimateId: integer('cost_estimate_id').references(() => costEstimates.id),
+  subcontractorName: varchar('subcontractor_name', { length: 255 }).notNull(),
+  subcontractorEmail: varchar('subcontractor_email', { length: 255 }),
+  subcontractorPhone: varchar('subcontractor_phone', { length: 50 }),
+
+  // Quote Information
+  quoteNumber: varchar('quote_number', { length: 100 }),
+  csiDivision: varchar('csi_division', { length: 10 }).notNull(),
+  scopeOfWork: text('scope_of_work').notNull(),
+
+  // Cost Details
+  quotedAmount: integer('quoted_amount').notNull(), // in cents
+  taxAmount: integer('tax_amount').default(0),
+  totalAmount: integer('total_amount').notNull(),
+
+  // Quote Status
+  isAccepted: boolean('is_accepted').default(false),
+  isIncludedInBid: boolean('is_included_in_bid').default(false),
+
+  // Dates
+  quoteDate: timestamp('quote_date'),
+  quoteValidUntil: timestamp('quote_valid_until'),
+
+  // Documents
+  quoteDocumentPath: text('quote_document_path'),
+  insuranceCertPath: text('insurance_cert_path'),
+
+  // Metadata
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// M/WBE Participation (for public sector bids)
+export const mwbeParticipation = pgTable('mwbe_participation', {
+  id: serial('id').primaryKey(),
+  bidPackageId: integer('bid_package_id').notNull().references(() => bidPackages.id),
+
+  // M/WBE Information
+  companyName: varchar('company_name', { length: 255 }).notNull(),
+  certificationType: varchar('certification_type', { length: 100 }), // 'MBE', 'WBE', 'DBE', 'HUB'
+  certificationNumber: varchar('certification_number', { length: 100 }),
+
+  // Scope & Cost
+  csiDivision: varchar('csi_division', { length: 10 }),
+  scopeOfWork: text('scope_of_work').notNull(),
+  contractAmount: integer('contract_amount').notNull(), // in cents
+  percentageOfTotal: integer('percentage_of_total'), // calculated percentage
+
+  // Status
+  isCommitted: boolean('is_committed').default(false),
+  isAwarded: boolean('is_awarded').default(false),
+
+  // Documents
+  certificationDocPath: text('certification_doc_path'),
+  letterOfIntentPath: text('letter_of_intent_path'),
+
+  // Metadata
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Type exports for bidding system
+export type BidPackage = typeof bidPackages.$inferSelect;
+export type NewBidPackage = typeof bidPackages.$inferInsert;
+export type CostEstimate = typeof costEstimates.$inferSelect;
+export type NewCostEstimate = typeof costEstimates.$inferInsert;
+export type CostEstimateLineItem = typeof costEstimateLineItems.$inferSelect;
+export type NewCostEstimateLineItem = typeof costEstimateLineItems.$inferInsert;
+export type BidChecklist = typeof bidChecklists.$inferSelect;
+export type NewBidChecklist = typeof bidChecklists.$inferInsert;
+export type SubcontractorQuote = typeof subcontractorQuotes.$inferSelect;
+export type NewSubcontractorQuote = typeof subcontractorQuotes.$inferInsert;
+export type MWBEParticipation = typeof mwbeParticipation.$inferSelect;
+export type NewMWBEParticipation = typeof mwbeParticipation.$inferInsert;
+export type AuditLog = typeof auditLog.$inferSelect;
+export type NewAuditLog = typeof auditLog.$inferInsert;

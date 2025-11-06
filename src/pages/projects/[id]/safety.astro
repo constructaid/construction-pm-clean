@@ -1,0 +1,39 @@
+---
+/**
+ * Safety Page - DISD Safety Management System
+ * Manages safety meetings, inspections, incidents, permits, training, and certifications
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+---
+
+<Layout title="Safety - ConstructAid">
+  <ProjectModuleNav projectId={id!} client:load />
+  <ProjectHeader client:load projectId={id!} moduleName="Safety Management" moduleIcon="🦺" />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-900 ml-64">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Safety Manager Container -->
+      <div id="safety-manager"></div>
+    </div>
+  </div>
+
+  <script>
+    import { render } from 'solid-js/web';
+    import SafetyManager from '../../../components/SafetyManager';
+
+    const container = document.getElementById('safety-manager');
+    if (container) {
+      const pathParts = window.location.pathname.split('/');
+      const projectId = parseInt(pathParts[2]);
+
+      render(() => SafetyManager({ projectId }), container);
+    }
+  </script>
+</Layout>

@@ -27,7 +27,7 @@ export function Hero() {
           </h1>
 
           {/* Tagline */}
-          <p class="mt-4 text-2xl text-ca-orange font-heading font-light tracking-wide uppercase">
+          <p class="mt-4 text-2xl font-heading font-bold tracking-wide uppercase" style="color: #FF6600;">
             Concept to Completion
           </p>
 

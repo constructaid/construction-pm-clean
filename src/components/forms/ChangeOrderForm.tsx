@@ -330,7 +330,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
             disabled={isSubmitting()}
             class="px-6 py-2 text-white rounded-md transition-colors"
             style={{
-              'background-color': isSubmitting() ? '#9CA3AF' : '#FF5E15',
+              'background-color': isSubmitting() ? '#9CA3AF' : '#FF6600',
               cursor: isSubmitting() ? 'not-allowed' : 'pointer'
             }}
           >

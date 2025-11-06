@@ -1,0 +1,46 @@
+---
+/**
+ * Field Superintendent Dashboard Page
+ * Project-specific field operations and compliance tracking
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav';
+import FieldSuperintendentDashboard from '../../../components/FieldSuperintendentDashboard';
+
+const { id } = Astro.params;
+const projectId = parseInt(id || '0');
+
+if (!projectId || isNaN(projectId)) {
+  return Astro.redirect('/dashboard');
+}
+---
+
+<Layout title="Field Superintendent Dashboard">
+  <div class="min-h-screen bg-gray-900">
+    {/* Project Navigation - Fixed Left Sidebar */}
+    <ProjectModuleNav projectId={projectId} activeModule="field" client:load />
+
+    {/* Main Content - Add left margin to account for sidebar */}
+    <div class="ml-64">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page Header */}
+        <div class="mb-6">
+          <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-3 rounded-lg shadow-lg">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-3xl font-bold text-white">Field Superintendent Dashboard</h1>
+              <p class="text-gray-400">DISD Project Compliance & Coordination</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Component */}
+        <FieldSuperintendentDashboard projectId={projectId} client:load />
+      </div>
+    </div>
+  </div>
+</Layout>

@@ -2,264 +2,217 @@
  * Single Project API Endpoint
  * GET /api/projects/[id] - Fetch a single project by ID
  * PUT /api/projects/[id] - Update a project
- * DELETE /api/projects/[id] - Delete a project
+ * DELETE /api/projects/[id] - Soft delete a project
+ *
+ * UPDATED: Now using P0 fixes:
+ * - Error handling wrapper (apiHandler)
+ * - Input validation (Zod schemas)
+ * - Soft delete (not hard delete)
+ * - Rate limiting
+ * - Audit logging (tracks all changes)
  */
 import type { APIRoute } from 'astro';
 import { db, projects } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import {
+  apiHandler,
+  validateBody,
+  validateParams,
+  NotFoundError,
+  checkRateLimit,
+} from '../../../lib/api/error-handler';
+import {
+  updateProjectSchema,
+  idParamSchema,
+} from '../../../lib/validation/schemas';
+import { excludeDeleted, softDelete } from '../../../lib/db/soft-delete';
+import {
+  logUpdate,
+  logDelete,
+  createAuditContext,
+  sanitizeForAudit,
+} from '../../../lib/api/audit-logger';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
-  try {
-    const { id } = params;
+// ========================================
+// GET - Fetch single project
+// ========================================
 
-    if (!id) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Project ID is required'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+export const GET: APIRoute = apiHandler(async (context) => {
+  // Validate URL parameters
+  const params = validateParams(context.params, idParamSchema);
 
-    // Parse ID as integer
-    const projectId = parseInt(id);
+  // Rate limiting
+  checkRateLimit(`project-detail-${context.clientAddress}`, 200, 60000);
 
-    if (isNaN(projectId)) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Invalid project ID'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+  console.log('GET /api/projects/' + params.id);
 
-    // Fetch project from database
-    const result = await db.select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
+  // Fetch project (excluding soft-deleted)
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(and(
+      eq(projects.id, params.id),
+      excludeDeleted()
+    ))
+    .limit(1);
 
-    if (result.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Project not found'
-        }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        project: result[0]
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error fetching project:', error);
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to fetch project',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  if (!project) {
+    throw new NotFoundError('Project', params.id);
   }
-};
 
-export const PUT: APIRoute = async ({ params, request }) => {
-  try {
-    const { id } = params;
+  return { project };
+});
 
-    if (!id) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Project ID is required'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+// ========================================
+// PUT - Update project
+// ========================================
 
-    const projectId = parseInt(id);
+export const PUT: APIRoute = apiHandler(async (context) => {
+  // Validate URL parameters
+  const params = validateParams(context.params, idParamSchema);
 
-    if (isNaN(projectId)) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Invalid project ID'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+  // Validate request body
+  const data = await validateBody(context, updateProjectSchema);
 
-    const body = await request.json();
+  // Rate limiting
+  checkRateLimit(`project-update-${context.clientAddress}`, 20, 60000);
 
-    console.log('PUT /api/projects/' + id, 'Body:', body);
+  console.log('PUT /api/projects/' + params.id, 'Data:', data);
 
-    // Validate required fields
-    if (!body.name || !body.projectNumber) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Missing required fields: name, projectNumber'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+  // Check if project exists and is not deleted
+  const [existing] = await db
+    .select()
+    .from(projects)
+    .where(and(
+      eq(projects.id, params.id),
+      excludeDeleted()
+    ))
+    .limit(1);
 
-    // Check if project exists
-    const existing = await db.select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (existing.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Project not found'
-        }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Prepare update data
-    const updateData: any = {
-      name: body.name,
-      description: body.description || null,
-      status: body.status || 'planning',
-      projectNumber: body.projectNumber,
-
-      // Location
-      address: body.address || null,
-      city: body.city || null,
-      state: body.state || null,
-      zipCode: body.zipCode || null,
-
-      // Budget
-      totalBudget: body.totalBudget ? parseFloat(body.totalBudget) : 0,
-
-      // Dates - handle date conversion
-      startDate: body.startDate ? new Date(body.startDate) : null,
-      estimatedCompletion: body.estimatedCompletion ? new Date(body.estimatedCompletion) : null,
-      actualCompletion: body.actualCompletion ? new Date(body.actualCompletion) : null,
-
-      // Team
-      ownerId: body.ownerId ? parseInt(body.ownerId) : null,
-      generalContractorId: body.generalContractorId ? parseInt(body.generalContractorId) : null,
-
-      // Metadata
-      tags: body.tags || [],
-      settings: body.settings || {},
-
-      // Update timestamp
-      updatedAt: new Date()
-    };
-
-    // Update project
-    const result = await db.update(projects)
-      .set(updateData)
-      .where(eq(projects.id, projectId))
-      .returning();
-
-    console.log('Project updated successfully:', result[0]);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Project updated successfully',
-        project: result[0]
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error updating project:', error);
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to update project',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  if (!existing) {
+    throw new NotFoundError('Project', params.id);
   }
-};
 
-export const DELETE: APIRoute = async ({ params }) => {
-  try {
-    const { id } = params;
+  // Prepare update data - only include provided fields
+  const updateData: any = {
+    updatedAt: new Date(),
+  };
 
-    if (!id) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Project ID is required'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+  // Only update fields that were provided
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.projectNumber !== undefined) updateData.projectNumber = data.projectNumber;
 
-    const projectId = parseInt(id);
+  // Location
+  if (data.address !== undefined) updateData.address = data.address;
+  if (data.city !== undefined) updateData.city = data.city;
+  if (data.state !== undefined) updateData.state = data.state;
+  if (data.zipCode !== undefined) updateData.zipCode = data.zipCode;
 
-    if (isNaN(projectId)) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Invalid project ID'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if project exists
-    const existing = await db.select()
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (existing.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Project not found'
-        }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Delete project
-    await db.delete(projects)
-      .where(eq(projects.id, projectId));
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Project deleted successfully'
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error deleting project:', error);
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to delete project',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  // Budget
+  if (data.totalBudget !== undefined) {
+    updateData.totalBudget = data.totalBudget;
+    // Recalculate remaining budget
+    updateData.remainingBudget = data.totalBudget - (existing.spentBudget || 0);
   }
-};
+
+  // Dates
+  if (data.startDate !== undefined) updateData.startDate = data.startDate;
+  if (data.estimatedCompletion !== undefined) updateData.estimatedCompletion = data.estimatedCompletion;
+
+  // Team
+  if (data.ownerId !== undefined) updateData.ownerId = data.ownerId;
+  if (data.generalContractorId !== undefined) updateData.generalContractorId = data.generalContractorId;
+
+  // Update project
+  const [updated] = await db
+    .update(projects)
+    .set(updateData)
+    .where(eq(projects.id, params.id))
+    .returning();
+
+  console.log('Project updated successfully:', updated.id);
+
+  // Log the update to audit log
+  // Note: In production, get user from context.locals.user (authentication)
+  const auditContext = createAuditContext(context, {
+    id: 1, // TODO: Replace with actual authenticated user ID
+    email: 'system@example.com', // TODO: Replace with actual user email
+    role: 'ADMIN', // TODO: Replace with actual user role
+  });
+
+  // Log audit (async, non-blocking)
+  logUpdate(
+    'projects',
+    params.id,
+    sanitizeForAudit(existing), // Old values
+    sanitizeForAudit(updated),  // New values
+    auditContext,
+    'Project updated via API'
+  ).catch(err => console.error('[AUDIT] Failed to log update:', err));
+
+  return {
+    message: 'Project updated successfully',
+    project: updated,
+  };
+});
+
+// ========================================
+// DELETE - Soft delete project
+// ========================================
+
+export const DELETE: APIRoute = apiHandler(async (context) => {
+  // Validate URL parameters
+  const params = validateParams(context.params, idParamSchema);
+
+  // Rate limiting
+  checkRateLimit(`project-delete-${context.clientAddress}`, 10, 60000);
+
+  console.log('DELETE /api/projects/' + params.id);
+
+  // Check if project exists and is not already deleted
+  const [existing] = await db
+    .select()
+    .from(projects)
+    .where(and(
+      eq(projects.id, params.id),
+      excludeDeleted()
+    ))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('Project', params.id);
+  }
+
+  // Soft delete the project
+  // Note: In a real app, you'd get the user ID from context.locals.user
+  const userId = 1; // TODO: Get from authenticated user
+
+  await db.execute(softDelete(projects, params.id, userId));
+
+  console.log('Project soft deleted:', params.id);
+
+  // Log the delete to audit log
+  const auditContext = createAuditContext(context, {
+    id: userId,
+    email: 'system@example.com', // TODO: Replace with actual user email
+    role: 'ADMIN', // TODO: Replace with actual user role
+  });
+
+  // Log audit (async, non-blocking)
+  logDelete(
+    'projects',
+    params.id,
+    sanitizeForAudit(existing), // Old values before deletion
+    auditContext,
+    'Project soft deleted via API'
+  ).catch(err => console.error('[AUDIT] Failed to log delete:', err));
+
+  return {
+    message: 'Project deleted successfully',
+    note: 'Project can be restored if needed',
+  };
+});

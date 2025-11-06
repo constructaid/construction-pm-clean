@@ -6,9 +6,9 @@ export default {
       colors: {
         // ConstructAid.net color scheme
         ca: {
-          orange: '#FF5E15', // ConstructAid primary orange
-          'orange-dark': '#e54d0d',
-          'orange-light': '#ff7a3d',
+          orange: '#FF6600', // Safety orange
+          'orange-dark': '#e55a00',
+          'orange-light': '#ff8033',
           teal: '#3D9991',
           'teal-dark': '#2d7a73',
           'teal-light': '#52ada5',
@@ -19,7 +19,7 @@ export default {
           'dark-secondary': '#1F1F1F',
         },
         primary: {
-          orange: '#FF5E15', // ConstructAid orange
+          orange: '#FF6600', // Safety orange
           dark: '#030E27',
           light: '#FFFFFF',
         },
@@ -34,7 +34,7 @@ export default {
           primary: '#030E27',
           secondary: '#6B6B6B',
           light: '#FFFFFF',
-          accent: '#FF5E15',
+          accent: '#FF6600',
           link: '#4BAAD8',
         },
         status: {

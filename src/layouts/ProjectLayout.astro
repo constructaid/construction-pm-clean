@@ -1,0 +1,22 @@
+---
+/**
+ * Project Layout - Layout wrapper for project-specific pages
+ * Provides consistent navigation and structure for all project pages
+ */
+import Layout from './Layout.astro';
+
+interface Props {
+  title: string;
+  projectId: number;
+}
+
+const { title, projectId } = Astro.props;
+---
+
+<Layout title={title}>
+  <div class="min-h-screen bg-gray-900">
+    <div class="container mx-auto px-4 py-8">
+      <slot />
+    </div>
+  </div>
+</Layout>

@@ -22,3 +22,24 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Documentation and temp files
+*.md
+!README.md
+forms and templates/
+py knowledge base/
+data/
+extracted-closeout-data/
+migrations/
+scripts/
+public/uploads/
+public/constructaid-logo.pdf
+public/convert-logo.html
+
+# Test and build files
+*.cjs
+*.js
+!*.config.js
+nul
+vitest.config.ts
+tests/

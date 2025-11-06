@@ -1,0 +1,246 @@
+---
+/**
+ * Invitation Acceptance Page
+ * Allows invited users to accept project invitations and sign up/login
+ */
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+
+const { token } = Astro.params;
+---
+
+<Layout title="Accept Project Invitation - ConstructAid">
+  <div class="min-h-screen bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl w-full">
+      <!-- Loading State -->
+      <div id="loading-state" class="bg-gray-800 rounded-lg shadow-xl p-8 border border-gray-700">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6600] mx-auto mb-4"></div>
+          <p class="text-gray-300">Loading invitation...</p>
+        </div>
+      </div>
+
+      <!-- Invitation Details (Hidden initially) -->
+      <div id="invitation-content" class="hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 border border-gray-700">
+          <!-- Header -->
+          <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#FF6600]/20 mb-4">
+              <span class="text-3xl">🎉</span>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">You've Been Invited!</h1>
+            <p class="text-gray-400">Join a construction project on ConstructAid</p>
+          </div>
+
+          <!-- Invitation Details -->
+          <div class="bg-gray-900 rounded-lg p-6 mb-6 border border-gray-700">
+            <h2 class="text-xl font-semibold text-white mb-4">Invitation Details</h2>
+            <div class="space-y-3">
+              <div class="flex justify-between py-2 border-b border-gray-700">
+                <span class="text-gray-400">Project</span>
+                <span id="project-name" class="text-white font-medium">-</span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-gray-700">
+                <span class="text-gray-400">Your Role</span>
+                <span id="team-role" class="text-white font-medium">-</span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-gray-700">
+                <span class="text-gray-400">Company</span>
+                <span id="company-name" class="text-white font-medium">-</span>
+              </div>
+              <div id="division-row" class="hidden flex justify-between py-2 border-b border-gray-700">
+                <span class="text-gray-400">Division</span>
+                <span id="division-name" class="text-white font-medium">-</span>
+              </div>
+              <div id="scope-row" class="hidden flex justify-between py-2">
+                <span class="text-gray-400">Scope of Work</span>
+                <span id="scope-of-work" class="text-white font-medium">-</span>
+              </div>
+            </div>
+
+            <!-- Personal Message -->
+            <div id="message-section" class="hidden mt-6 p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg">
+              <p class="text-sm text-blue-300 font-medium mb-2">Message from the team:</p>
+              <p id="personal-message" class="text-blue-200 italic"></p>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="space-y-4">
+            <button
+              id="accept-btn"
+              onclick="handleAcceptInvitation()"
+              class="w-full py-4 px-6 text-white font-semibold rounded-lg transition-all shadow-lg hover:opacity-90"
+              style="background-color: #FF6600;"
+            >
+              Accept Invitation & Continue
+            </button>
+            <p class="text-center text-sm text-gray-400">
+              By accepting, you'll be asked to sign in or create an account
+            </p>
+          </div>
+        </div>
+
+        <!-- Expiration Notice -->
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-500">
+            This invitation expires on <span id="expiration-date" class="font-medium">-</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Error State (Hidden initially) -->
+      <div id="error-state" class="hidden bg-gray-800 rounded-lg shadow-xl p-8 border border-red-500">
+        <div class="text-center">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mb-4">
+            <span class="text-3xl">⚠️</span>
+          </div>
+          <h1 class="text-2xl font-bold text-white mb-2">Invalid or Expired Invitation</h1>
+          <p id="error-message" class="text-gray-400 mb-6">
+            This invitation link is no longer valid. It may have expired or already been used.
+          </p>
+          <a
+            href="/"
+            class="inline-block py-3 px-6 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+          >
+            Go to Home
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ token }}>
+  // Fetch invitation details
+  async function loadInvitation() {
+    const loadingState = document.getElementById('loading-state');
+    const invitationContent = document.getElementById('invitation-content');
+    const errorState = document.getElementById('error-state');
+
+    try {
+      const response = await fetch(`/api/invitations/${token}`);
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Invalid invitation');
+      }
+
+      const invitation = data.invitation;
+
+      // Check if invitation is still valid
+      if (invitation.status !== 'pending') {
+        throw new Error('This invitation has already been used');
+      }
+
+      const expiresAt = new Date(invitation.expiresAt);
+      if (expiresAt < new Date()) {
+        throw new Error('This invitation has expired');
+      }
+
+      // Populate invitation details
+      document.getElementById('project-name').textContent = data.projectName || 'Unknown Project';
+      document.getElementById('team-role').textContent = formatRole(invitation.teamRole);
+      document.getElementById('company-name').textContent = invitation.companyName || '-';
+
+      // Show division if applicable
+      if (invitation.csiDivision && invitation.divisionName) {
+        document.getElementById('division-name').textContent =
+          `${invitation.csiDivision} - ${invitation.divisionName}`;
+        document.getElementById('division-row').classList.remove('hidden');
+      }
+
+      // Show scope if provided
+      if (invitation.scopeOfWork) {
+        document.getElementById('scope-of-work').textContent = invitation.scopeOfWork;
+        document.getElementById('scope-row').classList.remove('hidden');
+      }
+
+      // Show personal message if provided
+      if (invitation.message) {
+        document.getElementById('personal-message').textContent = invitation.message;
+        document.getElementById('message-section').classList.remove('hidden');
+      }
+
+      // Show expiration date
+      document.getElementById('expiration-date').textContent = expiresAt.toLocaleDateString();
+
+      // Show invitation content
+      loadingState.classList.add('hidden');
+      invitationContent.classList.remove('hidden');
+
+      // Store invitation data for acceptance
+      (window as any).invitationData = invitation;
+      (window as any).projectData = data.project;
+
+    } catch (error) {
+      console.error('Error loading invitation:', error);
+      document.getElementById('error-message').textContent =
+        error instanceof Error ? error.message : 'Unable to load invitation';
+      loadingState.classList.add('hidden');
+      errorState.classList.remove('hidden');
+    }
+  }
+
+  function formatRole(role: string): string {
+    const roleMap: Record<string, string> = {
+      owner: 'Owner / Client',
+      architect: 'Architect',
+      engineer: 'Engineer / Consultant',
+      general_contractor: 'General Contractor',
+      subcontractor: 'Subcontractor',
+      supplier: 'Supplier',
+      inspector: 'Inspector',
+      consultant: 'Consultant'
+    };
+    return roleMap[role] || role;
+  }
+
+  async function handleAcceptInvitation() {
+    const acceptBtn = document.getElementById('accept-btn');
+    if (!acceptBtn) return;
+
+    acceptBtn.textContent = 'Processing...';
+    acceptBtn.setAttribute('disabled', 'true');
+
+    try {
+      // First, mark invitation as accepted
+      const response = await fetch(`/api/invitations/${token}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to accept invitation');
+      }
+
+      // Redirect to signup/login page with invitation context
+      // Store invitation data in session storage for the signup page
+      sessionStorage.setItem('pendingInvitation', JSON.stringify({
+        token,
+        projectId: (window as any).invitationData.projectId,
+        projectName: (window as any).projectData?.name,
+        teamRole: (window as any).invitationData.teamRole,
+        email: (window as any).invitationData.email
+      }));
+
+      // Redirect to signup/login
+      window.location.href = '/auth/signup?invitation=true';
+
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+      alert(error instanceof Error ? error.message : 'Failed to accept invitation');
+      acceptBtn.textContent = 'Accept Invitation & Continue';
+      acceptBtn.removeAttribute('disabled');
+    }
+  }
+
+  // Make function available globally
+  (window as any).handleAcceptInvitation = handleAcceptInvitation;
+
+  // Load invitation on page load
+  loadInvitation();
+</script>

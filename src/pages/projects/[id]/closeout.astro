@@ -1,0 +1,353 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { Navbar } from '../../../components/Navbar.tsx';
+import ChatWidget from '../../../components/chatbot/ChatWidget.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+
+const { id } = Astro.params;
+const projectId = parseInt(id as string);
+
+// Fetch project data
+const baseUrl = Astro.url.origin;
+const projectResponse = await fetch(`${baseUrl}/api/projects/${projectId}`);
+const projectData = await projectResponse.json();
+---
+
+<Layout title={`Closeout - ${projectData.project?.name || 'Project'}`}>
+  <Navbar client:load />
+  <ChatWidget client:load />
+
+  <div class="min-h-screen bg-gray-900">
+    <!-- Project Header -->
+    <ProjectHeader project={projectData} client:load />
+
+    <!-- Module Navigation -->
+    <ProjectModuleNav projectId={projectId} activeModule="closeout" client:load />
+
+    <!-- Main Content -->
+    <div class="ml-64 pt-16">
+      <div class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h1 class="text-3xl font-bold text-white">Project Closeout</h1>
+              <p class="mt-2 text-gray-400">
+                Comprehensive closeout tracking and documentation management
+              </p>
+            </div>
+            <div class="flex gap-3">
+              <button class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all border border-gray-700">
+                📊 Export Report
+              </button>
+              <button class="px-4 py-2 bg-ca-orange text-white rounded-lg hover:bg-ca-orange-dark transition-all shadow-lg">
+                ➕ Add Custom Item
+              </button>
+            </div>
+          </div>
+
+          <!-- Progress Overview -->
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <div class="text-2xl font-bold text-white">0%</div>
+              <div class="text-sm text-gray-400">Overall Progress</div>
+              <div class="mt-2 h-2 bg-gray-700 rounded-full">
+                <div class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <div class="text-2xl font-bold text-yellow-400">0</div>
+              <div class="text-sm text-gray-400">Pending Items</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <div class="text-2xl font-bold text-blue-400">0</div>
+              <div class="text-sm text-gray-400">In Progress</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <div class="text-2xl font-bold text-green-400">0</div>
+              <div class="text-sm text-gray-400">Completed</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <div class="text-2xl font-bold text-red-400">0</div>
+              <div class="text-sm text-gray-400">Critical Items</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-blue-900/20 border border-blue-700/30 rounded-lg p-6 mb-8">
+          <div class="flex items-start gap-4">
+            <div class="text-4xl">💡</div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-blue-300 mb-2">Quick Actions</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button class="px-4 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all text-left border border-gray-700">
+                  <div class="font-medium">📋 Generate Checklist</div>
+                  <div class="text-sm text-gray-400 mt-1">Create division-specific closeout checklist</div>
+                </button>
+                <button class="px-4 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all text-left border border-gray-700">
+                  <div class="font-medium">📄 Import from Spec</div>
+                  <div class="text-sm text-gray-400 mt-1">Extract requirements from project manual</div>
+                </button>
+                <button class="px-4 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all text-left border border-gray-700">
+                  <div class="font-medium">✉️ Send Reminders</div>
+                  <div class="text-sm text-gray-400 mt-1">Email outstanding items to responsible parties</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mb-6 border-b border-gray-700">
+          <div class="flex gap-6">
+            <button class="px-4 py-3 text-white border-b-2 border-ca-orange font-medium">
+              📋 All Items
+            </button>
+            <button class="px-4 py-3 text-gray-400 hover:text-white border-b-2 border-transparent font-medium">
+              📚 O&M Manuals
+            </button>
+            <button class="px-4 py-3 text-gray-400 hover:text-white border-b-2 border-transparent font-medium">
+              🔒 Warranties
+            </button>
+            <button class="px-4 py-3 text-gray-400 hover:text-white border-b-2 border-transparent font-medium">
+              📐 As-Builts
+            </button>
+            <button class="px-4 py-3 text-gray-400 hover:text-white border-b-2 border-transparent font-medium">
+              🎓 Training
+            </button>
+            <button class="px-4 py-3 text-gray-400 hover:text-white border-b-2 border-transparent font-medium">
+              🔬 Testing
+            </button>
+            <button class="px-4 py-3 text-gray-400 hover:text-white border-b-2 border-transparent font-medium">
+              📜 Certificates
+            </button>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Division</label>
+              <select class="w-full px-3 py-2 bg-gray-900 text-white border border-gray-700 rounded-lg focus:ring-2 focus:ring-ca-orange focus:border-ca-orange">
+                <option value="">All Divisions</option>
+                <option value="DIV 01">DIV 01 - General</option>
+                <option value="DIV 03">DIV 03 - Concrete</option>
+                <option value="DIV 07">DIV 07 - Thermal & Moisture</option>
+                <option value="DIV 08">DIV 08 - Openings</option>
+                <option value="DIV 09">DIV 09 - Finishes</option>
+                <option value="DIV 21">DIV 21 - Fire Suppression</option>
+                <option value="DIV 22">DIV 22 - Plumbing</option>
+                <option value="DIV 23">DIV 23 - HVAC</option>
+                <option value="DIV 26">DIV 26 - Electrical</option>
+                <option value="DIV 27">DIV 27 - Communications</option>
+                <option value="DIV 28">DIV 28 - Fire Alarm & Security</option>
+                <option value="DISD">DISD Requirements</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Status</label>
+              <select class="w-full px-3 py-2 bg-gray-900 text-white border border-gray-700 rounded-lg focus:ring-2 focus:ring-ca-orange focus:border-ca-orange">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="submitted">Submitted</option>
+                <option value="approved">Approved</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Priority</label>
+              <select class="w-full px-3 py-2 bg-gray-900 text-white border border-gray-700 rounded-lg focus:ring-2 focus:ring-ca-orange focus:border-ca-orange">
+                <option value="">All Priorities</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Responsible Party</label>
+              <select class="w-full px-3 py-2 bg-gray-900 text-white border border-gray-700 rounded-lg focus:ring-2 focus:ring-ca-orange focus:border-ca-orange">
+                <option value="">All Parties</option>
+                <option value="gc">General Contractor</option>
+                <option value="architect">Architect</option>
+                <option value="engineer">Engineer</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Closeout Items List -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700">
+          <div class="p-6 text-center">
+            <div class="text-6xl mb-4">📋</div>
+            <h3 class="text-xl font-semibold text-white mb-2">No Closeout Items Yet</h3>
+            <p class="text-gray-400 mb-6">
+              Get started by generating a standard closeout checklist based on project divisions
+            </p>
+            <button class="px-6 py-3 bg-ca-orange text-white rounded-lg hover:bg-ca-orange-dark transition-all shadow-lg">
+              📋 Generate Standard Checklist
+            </button>
+          </div>
+        </div>
+
+        <!-- Division Progress Cards -->
+        <div class="mt-8">
+          <h2 class="text-2xl font-bold text-white mb-6">Progress by Division</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Critical Divisions -->
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">DIV 23 - HVAC</h3>
+                <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-700/30">
+                  6 Critical
+                </span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between text-gray-400">
+                  <span>TAB Report</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+                <div class="flex justify-between text-gray-400">
+                  <span>O&M Manuals</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+                <div class="flex justify-between text-gray-400">
+                  <span>Training</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+              </div>
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="h-2 bg-gray-700 rounded-full">
+                  <div class="h-full bg-yellow-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">0% Complete</div>
+              </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">DIV 26 - Electrical</h3>
+                <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-700/30">
+                  5 Critical
+                </span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between text-gray-400">
+                  <span>NETA Testing</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+                <div class="flex justify-between text-gray-400">
+                  <span>Panel Schedules</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+                <div class="flex justify-between text-gray-400">
+                  <span>Generator Testing</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+              </div>
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="h-2 bg-gray-700 rounded-full">
+                  <div class="h-full bg-yellow-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">0% Complete</div>
+              </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">DIV 28 - Fire Alarm</h3>
+                <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-700/30">
+                  4 Critical
+                </span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between text-gray-400">
+                  <span>System Testing</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+                <div class="flex justify-between text-gray-400">
+                  <span>Fire Marshal Approval</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+                <div class="flex justify-between text-gray-400">
+                  <span>Training</span>
+                  <span class="text-yellow-400">Pending</span>
+                </div>
+              </div>
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="h-2 bg-gray-700 rounded-full">
+                  <div class="h-full bg-yellow-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">0% Complete</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DISD Requirements Section -->
+        <div class="mt-8">
+          <h2 class="text-2xl font-bold text-white mb-6">DISD-Specific Requirements</h2>
+          <div class="bg-red-900/20 border border-red-700/30 rounded-lg p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                  <span class="text-gray-400">☐</span>
+                </div>
+                <div class="flex-1">
+                  <div class="font-medium text-white">Certificate of Occupancy</div>
+                  <div class="text-sm text-gray-400">Required from City of Dallas</div>
+                </div>
+                <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-700/30">
+                  Critical
+                </span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                  <span class="text-gray-400">☐</span>
+                </div>
+                <div class="flex-1">
+                  <div class="font-medium text-white">Campus Readiness Checklist</div>
+                  <div class="text-sm text-gray-400">DISD walkthrough required</div>
+                </div>
+                <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-700/30">
+                  Critical
+                </span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                  <span class="text-gray-400">☐</span>
+                </div>
+                <div class="flex-1">
+                  <div class="font-medium text-white">Final Lien Releases</div>
+                  <div class="text-sm text-gray-400">All subs and suppliers</div>
+                </div>
+                <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-700/30">
+                  Critical
+                </span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
+                  <span class="text-gray-400">☐</span>
+                </div>
+                <div class="flex-1">
+                  <div class="font-medium text-white">MWBE Compliance Report</div>
+                  <div class="text-sm text-gray-400">Final participation documentation</div>
+                </div>
+                <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-700/30">
+                  Critical
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

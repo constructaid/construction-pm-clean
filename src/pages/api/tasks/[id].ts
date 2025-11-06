@@ -1,98 +1,214 @@
 /**
- * Task Update API Endpoint
- * Handles updating individual task properties
- * PATCH /api/tasks/:id
+ * Single Task API Endpoint - PostgreSQL Version
+ * GET /api/tasks/[id] - Fetch a single task by ID
+ * PUT /api/tasks/[id] - Update a task
+ * DELETE /api/tasks/[id] - Soft delete a task
+ *
+ * UPDATED: Now using P0 fixes:
+ * - Error handling wrapper (apiHandler)
+ * - Input validation (Zod schemas)
+ * - Soft delete (not hard delete)
+ * - Rate limiting
+ * - Audit logging (tracks all changes)
  */
 import type { APIRoute } from 'astro';
-import { connectToDatabase } from '../../../lib/db/mongodb';
-import { TaskStatus } from '../../../lib/db/schemas/Task';
-import { ObjectId } from 'mongodb';
+import { db, tasks } from '../../../lib/db';
+import { eq, and } from 'drizzle-orm';
+import {
+  apiHandler,
+  validateBody,
+  validateParams,
+  NotFoundError,
+  checkRateLimit,
+} from '../../../lib/api/error-handler';
+import {
+  updateTaskSchema,
+  idParamSchema,
+} from '../../../lib/validation/schemas';
+import { excludeDeleted, softDelete } from '../../../lib/db/soft-delete';
+import {
+  logUpdate,
+  logDelete,
+  createAuditContext,
+  sanitizeForAudit,
+} from '../../../lib/api/audit-logger';
 
-export const PATCH: APIRoute = async ({ params, request }) => {
-  try {
-    const { id } = params;
+export const prerender = false;
 
-    if (!id) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Task ID is required'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+// ========================================
+// GET - Fetch single task
+// ========================================
 
-    // Parse request body
-    const updates = await request.json();
+export const GET: APIRoute = apiHandler(async (context) => {
+  // Validate URL parameters
+  const params = validateParams(context.params, idParamSchema);
 
-    // Connect to database
-    const { db } = await connectToDatabase();
-    const tasksCollection = db.collection('tasks');
+  // Rate limiting
+  checkRateLimit(`task-detail-${context.clientAddress}`, 200, 60000);
 
-    // Build update object
-    const updateDoc: any = {
-      updatedAt: new Date()
-    };
+  console.log('GET /api/tasks/' + params.id);
 
-    // Only allow certain fields to be updated
-    if (updates.status && Object.values(TaskStatus).includes(updates.status)) {
-      updateDoc.status = updates.status;
+  // Fetch task (excluding soft-deleted)
+  const [task] = await db
+    .select()
+    .from(tasks)
+    .where(and(
+      eq(tasks.id, params.id),
+      excludeDeleted()
+    ))
+    .limit(1);
 
-      // If completing task, set completedDate
-      if (updates.status === TaskStatus.COMPLETED) {
-        updateDoc.completedDate = new Date();
-      }
-    }
-
-    if (updates.priority) {
-      updateDoc.priority = updates.priority;
-    }
-
-    if (updates.dueDate) {
-      updateDoc.dueDate = new Date(updates.dueDate);
-    }
-
-    if (updates.title) {
-      updateDoc.title = updates.title;
-    }
-
-    if (updates.description !== undefined) {
-      updateDoc.description = updates.description;
-    }
-
-    // Update task
-    const result = await tasksCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: updateDoc }
-    );
-
-    if (result.matchedCount === 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Task not found'
-        }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Task updated successfully'
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error updating task:', error);
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to update task'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  if (!task) {
+    throw new NotFoundError('Task', params.id);
   }
-};
+
+  return { task };
+});
+
+// ========================================
+// PUT - Update task
+// ========================================
+
+export const PUT: APIRoute = apiHandler(async (context) => {
+  // Validate URL parameters
+  const params = validateParams(context.params, idParamSchema);
+
+  // Validate request body
+  const data = await validateBody(context, updateTaskSchema);
+
+  // Rate limiting
+  checkRateLimit(`task-update-${context.clientAddress}`, 50, 60000);
+
+  console.log('PUT /api/tasks/' + params.id, 'Data:', data);
+
+  // Check if task exists and is not deleted
+  const [existing] = await db
+    .select()
+    .from(tasks)
+    .where(and(
+      eq(tasks.id, params.id),
+      excludeDeleted()
+    ))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('Task', params.id);
+  }
+
+  // Prepare update data - only include provided fields
+  const updateData: any = {
+    updatedAt: new Date(),
+  };
+
+  // Only update fields that were provided
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.status !== undefined) {
+    updateData.status = data.status;
+    // If completing task, set completedAt
+    if (data.status === 'completed' && !existing.completedAt) {
+      updateData.completedAt = new Date();
+    }
+    // If reopening task, clear completedAt
+    if (data.status !== 'completed' && existing.completedAt) {
+      updateData.completedAt = null;
+    }
+  }
+  if (data.type !== undefined) updateData.type = data.type;
+  if (data.priority !== undefined) updateData.priority = data.priority;
+  if (data.assignedTo !== undefined) updateData.assignedTo = data.assignedTo;
+  if (data.assignedBy !== undefined) updateData.assignedBy = data.assignedBy;
+  if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
+  if (data.autoGenerated !== undefined) updateData.autoGenerated = data.autoGenerated;
+  if (data.generatedFrom !== undefined) updateData.generatedFrom = data.generatedFrom;
+  if (data.checklist !== undefined) updateData.checklist = data.checklist;
+  if (data.tags !== undefined) updateData.tags = data.tags;
+  if (data.dependencies !== undefined) updateData.dependencies = data.dependencies;
+
+  // Update task
+  const [updated] = await db
+    .update(tasks)
+    .set(updateData)
+    .where(eq(tasks.id, params.id))
+    .returning();
+
+  console.log('Task updated successfully:', updated.id);
+
+  // Log the update to audit log
+  const auditContext = createAuditContext(context, {
+    id: 1, // TODO: Replace with actual authenticated user ID
+    email: 'system@example.com', // TODO: Replace with actual user email
+    role: 'ADMIN', // TODO: Replace with actual user role
+  });
+
+  // Log audit (async, non-blocking)
+  logUpdate(
+    'tasks',
+    params.id,
+    sanitizeForAudit(existing),
+    sanitizeForAudit(updated),
+    auditContext,
+    'Task updated via API'
+  ).catch(err => console.error('[AUDIT] Failed to log update:', err));
+
+  return {
+    message: 'Task updated successfully',
+    task: updated,
+  };
+});
+
+// ========================================
+// DELETE - Soft delete task
+// ========================================
+
+export const DELETE: APIRoute = apiHandler(async (context) => {
+  // Validate URL parameters
+  const params = validateParams(context.params, idParamSchema);
+
+  // Rate limiting
+  checkRateLimit(`task-delete-${context.clientAddress}`, 20, 60000);
+
+  console.log('DELETE /api/tasks/' + params.id);
+
+  // Check if task exists and is not already deleted
+  const [existing] = await db
+    .select()
+    .from(tasks)
+    .where(and(
+      eq(tasks.id, params.id),
+      excludeDeleted()
+    ))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('Task', params.id);
+  }
+
+  // Soft delete the task
+  const userId = 1; // TODO: Get from authenticated user
+
+  await db.execute(softDelete(tasks, params.id, userId));
+
+  console.log('Task soft deleted:', params.id);
+
+  // Log the delete to audit log
+  const auditContext = createAuditContext(context, {
+    id: userId,
+    email: 'system@example.com', // TODO: Replace with actual user email
+    role: 'ADMIN', // TODO: Replace with actual user role
+  });
+
+  // Log audit (async, non-blocking)
+  logDelete(
+    'tasks',
+    params.id,
+    sanitizeForAudit(existing),
+    auditContext,
+    'Task soft deleted via API'
+  ).catch(err => console.error('[AUDIT] Failed to log delete:', err));
+
+  return {
+    message: 'Task deleted successfully',
+    note: 'Task can be restored if needed',
+  };
+});

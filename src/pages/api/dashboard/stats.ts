@@ -1,190 +1,193 @@
 /**
- * Dashboard Statistics API
+ * Dashboard Statistics API Endpoint - PostgreSQL Version
  * GET /api/dashboard/stats - Get dashboard statistics for a user
+ *
+ * UPDATED: Now using P0 fixes:
+ * - Error handling wrapper (apiHandler)
+ * - Input validation (Zod schemas)
+ * - Rate limiting
+ * - Migrated from MongoDB to PostgreSQL
  */
 import type { APIRoute } from 'astro';
-import { connectToDatabase } from '../../../lib/db/mongodb';
-import { TaskStatus, TaskPriority } from '../../../lib/db/schemas/Task';
-import { ProjectStatus } from '../../../lib/db/schemas/Project';
+import { db, projects, tasks } from '../../../lib/db';
+import { eq, and, inArray, gte, lt, sql, ne } from 'drizzle-orm';
+import {
+  apiHandler,
+  validateQuery,
+  checkRateLimit,
+} from '../../../lib/api/error-handler';
+import { excludeDeleted } from '../../../lib/db/soft-delete';
+import { z } from 'zod';
 
-export const GET: APIRoute = async ({ request }) => {
-  try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+export const prerender = false;
 
-    if (!userId) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'User ID is required'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+// ========================================
+// GET - Fetch dashboard statistics
+// ========================================
 
-    // Connect to database
-    const { db } = await connectToDatabase();
-    const projectsCollection = db.collection('projects');
-    const tasksCollection = db.collection('tasks');
-    const usersCollection = db.collection('users');
+// Query schema for GET
+const dashboardStatsQuerySchema = z.object({
+  userId: z.coerce.number().int().positive().optional(),
+  projectId: z.coerce.number().int().positive().optional(),
+});
 
-    // Calculate date ranges
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
+export const GET: APIRoute = apiHandler(async (context) => {
+  // Validate query parameters
+  const query = validateQuery(context, dashboardStatsQuerySchema);
 
-    // Fetch active projects count
-    const activeProjectsCount = await projectsCollection.countDocuments({
-      $or: [
-        { 'team.generalContractor': userId },
-        { 'team.owner': userId },
-        { 'team.architects': userId },
-        { 'team.subcontractors.userId': userId }
-      ],
-      status: {
-        $in: [
-          ProjectStatus.IN_PROGRESS,
-          ProjectStatus.PRE_CONSTRUCTION,
-          ProjectStatus.BIDDING
-        ]
-      }
-    });
+  // Rate limiting (200 requests per minute)
+  const rateLimitKey = `dashboard-stats-${context.clientAddress}`;
+  checkRateLimit(rateLimitKey, 200, 60000);
 
-    // Fetch tasks due this week
-    const tasksDueThisWeek = await tasksCollection.countDocuments({
-      assignedTo: userId,
-      status: { $ne: TaskStatus.COMPLETED },
-      dueDate: {
-        $gte: today,
-        $lt: nextWeek
-      }
-    });
+  console.log('GET /api/dashboard/stats - Fetching statistics');
 
-    // Fetch overdue tasks
-    const overdueTasks = await tasksCollection.countDocuments({
-      assignedTo: userId,
-      status: { $ne: TaskStatus.COMPLETED },
-      dueDate: { $lt: today }
-    });
+  // Calculate date ranges
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    // Fetch total budget across all projects
-    const projectsWithBudgets = await projectsCollection.aggregate([
-      {
-        $match: {
-          $or: [
-            { 'team.generalContractor': userId },
-            { 'team.owner': userId },
-            { 'team.architects': userId },
-            { 'team.subcontractors.userId': userId }
-          ]
-        }
+  // Fetch active projects count
+  const activeProjectsConditions = [
+    excludeDeleted(),
+    inArray(projects.status, ['in_progress', 'pre_construction', 'bidding'] as any[])
+  ];
+
+  const [{ count: activeProjectsCount }] = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(projects)
+    .where(and(...activeProjectsConditions));
+
+  // Fetch new projects this month
+  const newProjectsConditions = [
+    excludeDeleted(),
+    gte(projects.createdAt, startOfMonth)
+  ];
+
+  const [{ count: newProjectsThisMonth }] = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(projects)
+    .where(and(...newProjectsConditions));
+
+  // Fetch tasks due this week (non-deleted, non-completed)
+  const tasksDueConditions = [
+    excludeDeleted(),
+    ne(tasks.status, 'completed'),
+    gte(tasks.dueDate, today),
+    lt(tasks.dueDate, nextWeek)
+  ];
+
+  const [{ count: tasksDueThisWeek }] = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(tasks)
+    .where(and(...tasksDueConditions));
+
+  // Fetch overdue tasks
+  const overdueConditions = [
+    excludeDeleted(),
+    ne(tasks.status, 'completed'),
+    lt(tasks.dueDate, today)
+  ];
+
+  const [{ count: overdueTasks }] = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(tasks)
+    .where(and(...overdueConditions));
+
+  // Fetch total budget across all projects
+  const budgetQuery = await db
+    .select({
+      totalBudget: sql<number>`coalesce(sum(${projects.totalBudget}), 0)`,
+      totalSpent: sql<number>`coalesce(sum(${projects.spentBudget}), 0)`,
+      totalRemaining: sql<number>`coalesce(sum(${projects.remainingBudget}), 0)`,
+    })
+    .from(projects)
+    .where(excludeDeleted());
+
+  const budgetStats = budgetQuery[0] || {
+    totalBudget: 0,
+    totalSpent: 0,
+    totalRemaining: 0
+  };
+
+  // Calculate budget utilization percentage
+  const budgetUtilization = budgetStats.totalBudget > 0
+    ? Math.round((budgetStats.totalSpent / budgetStats.totalBudget) * 100)
+    : 0;
+
+  // Get project completion statistics
+  const completionStats = await db
+    .select({
+      avgProgress: sql<number>`coalesce(avg(${projects.progressPercentage}), 0)`,
+      completedProjects: sql<number>`cast(count(*) filter (where ${projects.status} = 'completed') as integer)`,
+      onHoldProjects: sql<number>`cast(count(*) filter (where ${projects.status} = 'on_hold') as integer)`,
+    })
+    .from(projects)
+    .where(excludeDeleted());
+
+  const completion = completionStats[0] || {
+    avgProgress: 0,
+    completedProjects: 0,
+    onHoldProjects: 0,
+  };
+
+  // Get task priority distribution
+  const tasksByPriority = await db
+    .select({
+      priority: tasks.priority,
+      count: sql<number>`cast(count(*) as integer)`,
+    })
+    .from(tasks)
+    .where(and(excludeDeleted(), ne(tasks.status, 'completed')))
+    .groupBy(tasks.priority);
+
+  const priorityDistribution = {
+    urgent: tasksByPriority.find(t => t.priority === 'urgent')?.count || 0,
+    high: tasksByPriority.find(t => t.priority === 'high')?.count || 0,
+    medium: tasksByPriority.find(t => t.priority === 'medium')?.count || 0,
+    low: tasksByPriority.find(t => t.priority === 'low')?.count || 0,
+  };
+
+  // Get recent activity count (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const [{ count: recentActivityCount }] = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(tasks)
+    .where(and(
+      excludeDeleted(),
+      gte(tasks.createdAt, sevenDaysAgo)
+    ));
+
+  console.log('Dashboard statistics fetched successfully');
+
+  return {
+    stats: {
+      activeProjects: {
+        count: activeProjectsCount,
+        newThisMonth: newProjectsThisMonth,
+        completed: completion.completedProjects,
+        onHold: completion.onHoldProjects,
       },
-      {
-        $group: {
-          _id: null,
-          totalBudget: { $sum: '$budget.total' },
-          totalSpent: { $sum: '$budget.spent' },
-          totalRemaining: { $sum: '$budget.remaining' }
-        }
-      }
-    ]).toArray();
-
-    const budgetStats = projectsWithBudgets[0] || {
-      totalBudget: 0,
-      totalSpent: 0,
-      totalRemaining: 0
-    };
-
-    // Calculate budget utilization percentage
-    const budgetUtilization = budgetStats.totalBudget > 0
-      ? Math.round((budgetStats.totalSpent / budgetStats.totalBudget) * 100)
-      : 0;
-
-    // Fetch team member count
-    const teamMembers = await projectsCollection.aggregate([
-      {
-        $match: {
-          $or: [
-            { 'team.generalContractor': userId },
-            { 'team.owner': userId }
-          ]
-        }
+      tasks: {
+        dueThisWeek: tasksDueThisWeek,
+        overdue: overdueTasks,
+        byPriority: priorityDistribution,
       },
-      {
-        $project: {
-          members: {
-            $concatArrays: [
-              { $ifNull: ['$team.architects', []] },
-              { $ifNull: ['$team.subcontractors', []] },
-              { $ifNull: ['$team.consultants', []] }
-            ]
-          }
-        }
+      budget: {
+        total: budgetStats.totalBudget,
+        spent: budgetStats.totalSpent,
+        remaining: budgetStats.totalRemaining,
+        utilizationPercentage: budgetUtilization,
       },
-      {
-        $unwind: {
-          path: '$members',
-          preserveNullAndEmptyArrays: false
-        }
+      progress: {
+        averageCompletion: Math.round(completion.avgProgress),
       },
-      {
-        $group: {
-          _id: '$members.userId'
-        }
+      activity: {
+        recentTasksCreated: recentActivityCount,
       },
-      {
-        $count: 'totalMembers'
-      }
-    ]).toArray();
-
-    const teamMemberCount = teamMembers[0]?.totalMembers || 0;
-
-    // Get new projects this month
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const newProjectsThisMonth = await projectsCollection.countDocuments({
-      $or: [
-        { 'team.generalContractor': userId },
-        { 'team.owner': userId }
-      ],
-      createdAt: { $gte: startOfMonth }
-    });
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        stats: {
-          activeProjects: {
-            count: activeProjectsCount,
-            newThisMonth: newProjectsThisMonth
-          },
-          tasksDueThisWeek: {
-            count: tasksDueThisWeek,
-            overdue: overdueTasks
-          },
-          budget: {
-            total: budgetStats.totalBudget,
-            spent: budgetStats.totalSpent,
-            remaining: budgetStats.totalRemaining,
-            utilizationPercentage: budgetUtilization
-          },
-          teamMembers: {
-            count: teamMemberCount
-          }
-        }
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to fetch dashboard statistics'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-};
+    },
+  };
+});

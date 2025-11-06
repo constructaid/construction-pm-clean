@@ -1,69 +1,141 @@
 /**
- * Activity Log API Endpoint
- * GET /api/activity-log - Get activity log for a project
+ * Activity Log API Endpoint - PostgreSQL Version
+ * GET /api/activity-log - Get activity log with filtering and pagination
+ *
+ * UPDATED: Now using P0 fixes:
+ * - Error handling wrapper (apiHandler)
+ * - Input validation (Zod schemas)
+ * - Rate limiting
+ * - Pagination support
+ * Note: This endpoint is READ-ONLY (no POST/PUT/DELETE needed as the audit logger writes to it)
  */
 import type { APIRoute } from 'astro';
 import { db, activityLog } from '../../lib/db';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
+import {
+  apiHandler,
+  validateQuery,
+  checkRateLimit,
+} from '../../lib/api/error-handler';
+import { paginationSchema } from '../../lib/validation/schemas';
+import { z } from 'zod';
 
-export const GET: APIRoute = async ({ url }) => {
-  try {
-    const projectId = url.searchParams.get('projectId');
-    const entityType = url.searchParams.get('entityType');
-    const entityId = url.searchParams.get('entityId');
-    const action = url.searchParams.get('action');
-    const limit = parseInt(url.searchParams.get('limit') || '50');
+export const prerender = false;
 
-    if (!projectId) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'Project ID is required'
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+// ========================================
+// GET - Fetch activity log with filtering
+// ========================================
 
-    // Build query conditions
-    let conditions = [eq(activityLog.projectId, parseInt(projectId))];
+// Query schema for GET
+const activityLogQuerySchema = paginationSchema.extend({
+  projectId: z.coerce.number().int().positive().optional(),
+  entityType: z.string().optional(),
+  entityId: z.coerce.number().int().positive().optional(),
+  action: z.enum(['CREATE', 'UPDATE', 'DELETE', 'all']).default('all'),
+  userId: z.coerce.number().int().positive().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+});
 
-    if (entityType) {
-      conditions.push(eq(activityLog.entityType, entityType));
-    }
+export const GET: APIRoute = apiHandler(async (context) => {
+  // Validate query parameters
+  const query = validateQuery(context, activityLogQuerySchema);
 
-    if (entityId) {
-      conditions.push(eq(activityLog.entityId, parseInt(entityId)));
-    }
+  // Rate limiting (500 requests per minute for activity log reads)
+  const rateLimitKey = `activity-log-list-${context.clientAddress}`;
+  checkRateLimit(rateLimitKey, 500, 60000);
 
-    if (action) {
-      conditions.push(eq(activityLog.action, action));
-    }
+  console.log('GET /api/activity-log - Fetching activity log with filters:', query);
 
-    const result = await db.select()
-      .from(activityLog)
-      .where(and(...conditions))
-      .orderBy(desc(activityLog.createdAt))
-      .limit(limit);
+  // Build WHERE conditions
+  const conditions = [];
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        activities: result,
-        count: result.length
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error fetching activity log:', error);
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: 'Failed to fetch activity log',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  // Project filter
+  if (query.projectId) {
+    conditions.push(eq(activityLog.projectId, query.projectId));
   }
-};
+
+  // Entity type filter
+  if (query.entityType) {
+    conditions.push(eq(activityLog.entityType, query.entityType));
+  }
+
+  // Entity ID filter
+  if (query.entityId) {
+    conditions.push(eq(activityLog.entityId, query.entityId));
+  }
+
+  // Action filter
+  if (query.action !== 'all') {
+    conditions.push(eq(activityLog.action, query.action));
+  }
+
+  // User filter
+  if (query.userId) {
+    conditions.push(eq(activityLog.userId, query.userId));
+  }
+
+  // Date range filter
+  if (query.startDate) {
+    conditions.push(gte(activityLog.createdAt, query.startDate));
+  }
+  if (query.endDate) {
+    conditions.push(lte(activityLog.createdAt, query.endDate));
+  }
+
+  // Fetch activity log with pagination
+  const offset = (query.page - 1) * query.limit;
+
+  // Get total count
+  const countQuery = conditions.length > 0
+    ? db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(activityLog)
+        .where(and(...conditions))
+    : db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(activityLog);
+
+  const [{ count }] = await countQuery;
+
+  // Get paginated results
+  const resultQuery = conditions.length > 0
+    ? db
+        .select()
+        .from(activityLog)
+        .where(and(...conditions))
+        .orderBy(
+          query.sortOrder === 'desc' ? desc(activityLog.createdAt) : activityLog.createdAt
+        )
+        .limit(query.limit)
+        .offset(offset)
+    : db
+        .select()
+        .from(activityLog)
+        .orderBy(
+          query.sortOrder === 'desc' ? desc(activityLog.createdAt) : activityLog.createdAt
+        )
+        .limit(query.limit)
+        .offset(offset);
+
+  const result = await resultQuery;
+
+  // Calculate pagination metadata
+  const totalPages = Math.ceil(count / query.limit);
+  const hasNextPage = query.page < totalPages;
+  const hasPrevPage = query.page > 1;
+
+  console.log(`Found ${result.length} activity log entries (${count} total)`);
+
+  return {
+    activities: result,
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      totalItems: count,
+      totalPages,
+      hasNextPage,
+      hasPrevPage,
+    },
+  };
+});

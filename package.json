@@ -6,19 +6,31 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "migrate": "tsx scripts/run-migrations.ts",
+    "backup": "powershell -ExecutionPolicy Bypass -File scripts/backup-database.ps1",
+    "restore": "powershell -ExecutionPolicy Bypass -File scripts/restore-database.ps1",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.0",
     "@astrojs/solid-js": "^5.1.1",
     "@neondatabase/serverless": "^1.0.2",
     "@tailwindcss/vite": "^4.1.13",
+    "@types/formidable": "^3.4.6",
     "astro": "^5.14.0",
     "bcryptjs": "^3.0.2",
+    "canvas": "^3.2.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.6",
+    "formidable": "^3.5.4",
     "mongodb": "^6.20.0",
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.4.394",
+    "pdfkit": "^0.17.2",
     "postgres": "^3.4.7",
     "solid-js": "^1.9.9",
     "tailwindcss": "^4.1.13",
@@ -27,6 +39,13 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "drizzle-kit": "^0.31.5"
+    "@types/node": "^24.9.2",
+    "@types/pdf-parse": "^1.1.5",
+    "@vitest/ui": "^4.0.7",
+    "drizzle-kit": "^0.31.5",
+    "jsdom": "^27.1.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "vitest": "^4.0.7"
   }
 }

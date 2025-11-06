@@ -1,0 +1,16 @@
+---
+/**
+ * AI Workspace - Project-specific AI assistant
+ * Route: /ai-workspace or /ai-workspace?projectId=1
+ */
+import Layout from '../layouts/Layout.astro';
+import AIWorkspace from '../components/ai/AIWorkspace.tsx';
+
+const projectId = Astro.url.searchParams.get('projectId');
+---
+
+<Layout title="AI Workspace - ConstructAid">
+  <div class="min-h-screen bg-gray-950">
+    <AIWorkspace client:load projectId={projectId ? parseInt(projectId) : null} />
+  </div>
+</Layout>

@@ -1,0 +1,651 @@
+---
+/**
+ * Cost Estimating & Bidding Page
+ * Manage cost estimates, bid packages, and line items organized by CSI divisions
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+---
+
+<Layout title="Cost Estimating - ConstructAid">
+  <!-- Left Sidebar Navigation -->
+  <ProjectModuleNav client:load projectId={id!} />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-900 ml-64">
+    <!-- Top Bar with Breadcrumbs -->
+    <div class="bg-gray-800 border-b border-gray-700 shadow-sm sticky top-16 z-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2 text-sm text-gray-400">
+            <a href="/projects" class="hover:text-white">Projects</a>
+            <span>/</span>
+            <a href={`/projects/${id}`} class="hover:text-white" id="breadcrumb-project-name">Project</a>
+            <span>/</span>
+            <span class="text-white font-medium">Cost Estimating</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Page Header -->
+      <div class="mb-6">
+        <h1 class="text-3xl font-heading font-light text-white mb-2">Cost Estimating & Bidding</h1>
+        <p class="text-gray-400">Create cost estimates organized by CSI MasterFormat divisions</p>
+      </div>
+
+      <!-- Estimate Statistics Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6" id="estimate-stats">
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-400">Total Estimates</p>
+              <p class="text-2xl font-heading font-light text-white mt-1" id="stat-total">-</p>
+            </div>
+            <div class="p-2 bg-gray-700 rounded-lg">
+              <span class="text-2xl">📊</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-400">Draft</p>
+              <p class="text-2xl font-heading font-light text-yellow-400 mt-1" id="stat-draft">-</p>
+            </div>
+            <div class="p-2 bg-yellow-900/30 rounded-lg">
+              <span class="text-2xl">📝</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-400">In Progress</p>
+              <p class="text-2xl font-heading font-light text-blue-400 mt-1" id="stat-in-progress">-</p>
+            </div>
+            <div class="p-2 bg-blue-900/30 rounded-lg">
+              <span class="text-2xl">🚧</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-400">Approved</p>
+              <p class="text-2xl font-heading font-light text-green-400 mt-1" id="stat-approved">-</p>
+            </div>
+            <div class="p-2 bg-green-900/30 rounded-lg">
+              <span class="text-2xl">✅</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 shadow-ca-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-400">Total Value</p>
+              <p class="text-lg font-heading font-light text-green-400 mt-1" id="stat-total-value">$0</p>
+            </div>
+            <div class="p-2 bg-green-900/30 rounded-lg">
+              <span class="text-2xl">💰</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create New Estimate Button -->
+      <div class="bg-gradient-to-r from-green-900/30 to-blue-900/30 rounded-lg border-2 border-green-700 shadow-ca-sm p-4 mb-6">
+        <div class="flex gap-3 items-center justify-between">
+          <div>
+            <h3 class="text-lg font-medium text-white mb-1">Create Cost Estimate</h3>
+            <p class="text-sm text-gray-400">Build detailed estimates organized by CSI MasterFormat divisions</p>
+          </div>
+          <button
+            onclick="openCreateEstimateModal()"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md font-medium whitespace-nowrap"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            New Estimate
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters and Actions Bar -->
+      <div class="bg-gray-800 rounded-lg border border-gray-700 shadow-ca-sm p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Status Filter -->
+            <select id="filter-status" class="px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg text-sm focus:ring-2 focus:ring-green-600 focus:border-green-600">
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="in_progress">In Progress</option>
+              <option value="under_review">Under Review</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="finalized">Finalized</option>
+            </select>
+
+            <!-- Search -->
+            <input
+              type="text"
+              id="search-estimates"
+              placeholder="Search estimates..."
+              class="px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg text-sm focus:ring-2 focus:ring-green-600 focus:border-green-600 w-64"
+            />
+
+            <!-- Clear Filters -->
+            <button
+              id="clear-filters"
+              class="px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-900 rounded-lg transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estimates List Container -->
+      <div id="estimates-container" class="space-y-4">
+        <div class="text-center py-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p class="text-gray-400">Loading estimates...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const projectId = window.location.pathname.split('/')[2];
+  let allEstimates: any[] = [];
+  let estimateStats: any = {};
+
+  // Load estimates on page load
+  loadEstimates();
+
+  // Event listeners
+  document.getElementById('filter-status')?.addEventListener('change', filterEstimates);
+  document.getElementById('search-estimates')?.addEventListener('input', filterEstimates);
+  document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
+
+  async function loadEstimates() {
+    try {
+      const response = await fetch(`/api/bidding/estimates?projectId=${projectId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        allEstimates = data.estimates;
+        estimateStats = data.stats;
+        updateStatistics();
+        renderEstimates(allEstimates);
+
+        // Load project name for breadcrumb
+        const projectResponse = await fetch(`/api/projects/${projectId}`);
+        const projectData = await projectResponse.json();
+        if (projectData.success) {
+          const breadcrumbEl = document.getElementById('breadcrumb-project-name');
+          if (breadcrumbEl) {
+            breadcrumbEl.textContent = projectData.project.name;
+          }
+        }
+      } else {
+        renderError('Failed to load estimates');
+      }
+    } catch (error) {
+      console.error('Error loading estimates:', error);
+      renderError('Failed to load estimates');
+    }
+  }
+
+  function updateStatistics() {
+    document.getElementById('stat-total')!.textContent = estimateStats.total?.toString() || '0';
+    document.getElementById('stat-draft')!.textContent = estimateStats.draft?.toString() || '0';
+    document.getElementById('stat-in-progress')!.textContent = estimateStats.in_progress?.toString() || '0';
+    document.getElementById('stat-approved')!.textContent = estimateStats.approved?.toString() || '0';
+
+    const totalValue = estimateStats.total_value || 0;
+    document.getElementById('stat-total-value')!.textContent = formatCurrency(totalValue);
+  }
+
+  function filterEstimates() {
+    const statusFilter = (document.getElementById('filter-status') as HTMLSelectElement)?.value;
+    const searchTerm = (document.getElementById('search-estimates') as HTMLInputElement)?.value.toLowerCase();
+
+    const filtered = allEstimates.filter(estimate => {
+      const matchesStatus = !statusFilter || estimate.status === statusFilter;
+      const matchesSearch = !searchTerm ||
+        estimate.title.toLowerCase().includes(searchTerm) ||
+        estimate.estimateNumber?.toLowerCase().includes(searchTerm) ||
+        estimate.description?.toLowerCase().includes(searchTerm);
+
+      return matchesStatus && matchesSearch;
+    });
+
+    renderEstimates(filtered);
+  }
+
+  function clearFilters() {
+    (document.getElementById('filter-status') as HTMLSelectElement).value = '';
+    (document.getElementById('search-estimates') as HTMLInputElement).value = '';
+    renderEstimates(allEstimates);
+  }
+
+  function renderEstimates(estimates: any[]) {
+    const container = document.getElementById('estimates-container');
+    if (!container) return;
+
+    if (estimates.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-12 bg-gray-800 rounded-lg border border-gray-700">
+          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <h3 class="text-lg font-medium text-white mb-2">No estimates found</h3>
+          <p class="text-gray-400 mb-4">Get started by creating your first cost estimate</p>
+          <button onclick="openCreateEstimateModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Create Estimate
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = estimates.map(estimate => renderEstimateCard(estimate)).join('');
+  }
+
+  function renderEstimateCard(estimate: any) {
+    const statusColors = {
+      draft: { badge: 'bg-gray-700 text-gray-300', icon: '📝' },
+      in_progress: { badge: 'bg-blue-900/50 text-blue-300', icon: '🚧' },
+      under_review: { badge: 'bg-yellow-900/50 text-yellow-300', icon: '👀' },
+      approved: { badge: 'bg-green-900/50 text-green-300', icon: '✅' },
+      rejected: { badge: 'bg-red-900/50 text-red-300', icon: '❌' },
+      finalized: { badge: 'bg-purple-900/50 text-purple-300', icon: '🔒' },
+    };
+
+    const status = statusColors[estimate.status] || statusColors.draft;
+
+    // Calculate markup summary
+    const subtotal = estimate.subtotalCost || 0;
+    const overhead = estimate.overhead || 0;
+    const profit = estimate.profit || 0;
+    const total = estimate.totalEstimatedCost || 0;
+
+    return `
+      <div class="bg-gray-800 rounded-lg border border-gray-700 shadow-ca-sm hover:shadow-md transition-shadow cursor-pointer" onclick="viewEstimateDetail(${estimate.id})">
+        <div class="p-5">
+          <!-- Header Row -->
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-sm font-mono text-gray-400">${estimate.estimateNumber || `EST-${estimate.id}`}</span>
+                <span class="px-2 py-0.5 rounded text-xs font-medium ${status.badge}">${status.icon} ${estimate.status.replace('_', ' ').toUpperCase()}</span>
+                ${estimate.version > 1 ? `<span class="px-2 py-0.5 bg-blue-900/50 text-blue-300 text-xs font-medium rounded">v${estimate.version}</span>` : ''}
+              </div>
+              <h3 class="text-lg font-semibold text-white mb-1">${estimate.title}</h3>
+              ${estimate.description ? `<p class="text-sm text-gray-400 line-clamp-2">${estimate.description}</p>` : ''}
+            </div>
+            <div class="flex flex-col items-end gap-2 ml-4">
+              <div class="text-right">
+                <p class="text-2xl font-heading font-light text-green-400">${formatCurrency(total)}</p>
+                <p class="text-xs text-gray-400">Total Estimate</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cost Breakdown Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-700">
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Subtotal</p>
+              <p class="text-sm font-medium text-white">${formatCurrency(subtotal)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Overhead (${estimate.overheadPercentage || 10}%)</p>
+              <p class="text-sm font-medium text-white">${formatCurrency(overhead)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Profit (${estimate.profitPercentage || 8}%)</p>
+              <p class="text-sm font-medium text-white">${formatCurrency(profit)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Line Items</p>
+              <p class="text-sm font-medium text-white">${estimate.lineItemCount || 0} items</p>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-700">
+            <button
+              onclick="event.stopPropagation(); editEstimate(${estimate.id})"
+              class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              onclick="event.stopPropagation(); exportEstimate(${estimate.id}, 'excel')"
+              class="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+            >
+              📊 Export Excel
+            </button>
+            <button
+              onclick="event.stopPropagation(); exportEstimate(${estimate.id}, 'pdf')"
+              class="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+            >
+              📄 Export PDF
+            </button>
+            <button
+              onclick="event.stopPropagation(); manageAttachments(${estimate.id})"
+              class="px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              📎 Attachments
+            </button>
+          </div>
+
+          <!-- Footer Metadata -->
+          <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-700 text-xs text-gray-400">
+            <div class="flex items-center gap-4">
+              ${estimate.estimatedByName ? `<span>Estimated by: ${estimate.estimatedByName}</span>` : ''}
+              ${estimate.createdAt ? `<span>Created: ${formatDate(estimate.createdAt)}</span>` : ''}
+            </div>
+            ${estimate.updatedAt ? `<span>Updated: ${formatDate(estimate.updatedAt)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function formatCurrency(cents: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(cents / 100);
+  }
+
+  function formatDate(dateString: string) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderError(message: string) {
+    const container = document.getElementById('estimates-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="text-center py-12 bg-gray-800 rounded-lg border border-red-700">
+        <svg class="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-white mb-2">${message}</h3>
+        <button onclick="loadEstimates()" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+          Retry
+        </button>
+      </div>
+    `;
+  }
+
+  function viewEstimateDetail(estimateId: number) {
+    window.location.href = `/projects/${projectId}/estimating/${estimateId}`;
+  }
+
+  function editEstimate(estimateId: number) {
+    window.location.href = `/projects/${projectId}/estimating/${estimateId}/edit`;
+  }
+
+  async function exportEstimate(estimateId: number, format: 'excel' | 'pdf') {
+    try {
+      const response = await fetch(`/api/bidding/estimates/${estimateId}/export?format=${format}`);
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Get the blob and create download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `estimate-${estimateId}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export estimate. This feature is coming soon!');
+    }
+  }
+
+  function manageAttachments(estimateId: number) {
+    const modal = document.createElement('div');
+    modal.id = 'attachments-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div class="sticky top-0 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-heading font-light text-white">Estimate Attachments</h2>
+          <button onclick="closeAttachmentsModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <!-- Upload Section -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-300 mb-2">Upload Documents</label>
+            <div class="flex items-center gap-2">
+              <input type="file" id="attachment-file" class="flex-1 px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg text-sm" multiple>
+              <button onclick="uploadAttachment(${estimateId})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                Upload
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Supported: PDF, Excel, Word, Images (Max 10MB each)</p>
+          </div>
+
+          <!-- Attachments List -->
+          <div id="attachments-list">
+            <p class="text-sm text-gray-400 text-center py-8">No attachments yet. Upload documents to get started.</p>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function closeAttachmentsModal() {
+    const modal = document.getElementById('attachments-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  async function uploadAttachment(estimateId: number) {
+    const fileInput = document.getElementById('attachment-file') as HTMLInputElement;
+    if (!fileInput.files || fileInput.files.length === 0) {
+      alert('Please select files to upload');
+      return;
+    }
+
+    const formData = new FormData();
+    for (let i = 0; i < fileInput.files.length; i++) {
+      formData.append('files', fileInput.files[i]);
+    }
+
+    try {
+      const response = await fetch(`/api/bidding/estimates/${estimateId}/attachments`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Files uploaded successfully!');
+        fileInput.value = '';
+        // Reload attachments list
+        // TODO: Implement loadAttachments()
+      } else {
+        alert('Upload failed: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload files. Please try again.');
+    }
+  }
+
+  function openCreateEstimateModal() {
+    const modal = document.createElement('div');
+    modal.id = 'create-estimate-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-heading font-light text-white">Create New Cost Estimate</h2>
+          <button onclick="closeCreateEstimateModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <form id="create-estimate-form" class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Estimate Number *</label>
+              <input type="text" id="new-estimate-number" required class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600" placeholder="EST-2024-001">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Title *</label>
+              <input type="text" id="new-estimate-title" required class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600" placeholder="Enter estimate title">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Description</label>
+              <textarea id="new-estimate-description" rows="3" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600" placeholder="Brief description of this estimate..."></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Overhead %</label>
+                <input type="number" id="new-estimate-overhead-pct" min="0" max="100" value="10" step="0.1" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Profit %</label>
+                <input type="number" id="new-estimate-profit-pct" min="0" max="100" value="8" step="0.1" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Bond %</label>
+                <input type="number" id="new-estimate-bond-pct" min="0" max="100" value="2" step="0.1" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Contingency %</label>
+                <input type="number" id="new-estimate-contingency-pct" min="0" max="100" value="5" step="0.1" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Notes / Assumptions</label>
+              <textarea id="new-estimate-notes" rows="3" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg focus:ring-2 focus:ring-green-600" placeholder="Key assumptions, exclusions, or notes..."></textarea>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-gray-700 flex justify-end gap-3">
+            <button type="button" onclick="closeCreateEstimateModal()" class="px-4 py-2 text-gray-300 bg-gray-900 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+              Create Estimate
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Handle form submission
+    document.getElementById('create-estimate-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleCreateEstimate();
+    });
+  }
+
+  async function handleCreateEstimate() {
+    const estimateData = {
+      projectId: parseInt(projectId),
+      estimateNumber: (document.getElementById('new-estimate-number') as HTMLInputElement).value,
+      title: (document.getElementById('new-estimate-title') as HTMLInputElement).value,
+      description: (document.getElementById('new-estimate-description') as HTMLTextAreaElement).value,
+      overheadPercentage: parseFloat((document.getElementById('new-estimate-overhead-pct') as HTMLInputElement).value),
+      profitPercentage: parseFloat((document.getElementById('new-estimate-profit-pct') as HTMLInputElement).value),
+      bondPercentage: parseFloat((document.getElementById('new-estimate-bond-pct') as HTMLInputElement).value),
+      contingencyPercentage: parseFloat((document.getElementById('new-estimate-contingency-pct') as HTMLInputElement).value),
+      notes: (document.getElementById('new-estimate-notes') as HTMLTextAreaElement).value,
+      status: 'draft',
+      version: 1,
+    };
+
+    try {
+      const response = await fetch(`/api/bidding/estimates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(estimateData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeCreateEstimateModal();
+        // Reload estimates
+        await loadEstimates();
+        // Redirect to edit the new estimate
+        window.location.href = `/projects/${projectId}/estimating/${result.estimate.id}`;
+      } else {
+        alert('Failed to create estimate: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error creating estimate:', error);
+      alert('Failed to create estimate. Please try again.');
+    }
+  }
+
+  function closeCreateEstimateModal() {
+    const modal = document.getElementById('create-estimate-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  // Make functions globally available
+  (window as any).viewEstimateDetail = viewEstimateDetail;
+  (window as any).editEstimate = editEstimate;
+  (window as any).exportEstimate = exportEstimate;
+  (window as any).manageAttachments = manageAttachments;
+  (window as any).closeAttachmentsModal = closeAttachmentsModal;
+  (window as any).uploadAttachment = uploadAttachment;
+  (window as any).openCreateEstimateModal = openCreateEstimateModal;
+  (window as any).closeCreateEstimateModal = closeCreateEstimateModal;
+  (window as any).loadEstimates = loadEstimates;
+</script>

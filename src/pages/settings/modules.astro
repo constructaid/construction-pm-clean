@@ -1,0 +1,31 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ModuleManager from '../../components/ModuleManager';
+
+export const prerender = false;
+---
+
+<Layout title="Module Subscriptions - ConstructHub">
+  <div class="min-h-screen bg-gray-950">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <!-- Page Header -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-white mb-2">Module Subscriptions</h1>
+            <p class="text-gray-400">Manage your add-on modules and subscriptions</p>
+          </div>
+          <a
+            href="/settings"
+            class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded transition-all"
+          >
+            ← Back to Settings
+          </a>
+        </div>
+      </div>
+
+      <!-- Module Manager Component -->
+      <ModuleManager client:load />
+    </div>
+  </div>
+</Layout>

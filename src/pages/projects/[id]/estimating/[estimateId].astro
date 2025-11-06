@@ -1,0 +1,1176 @@
+---
+/**
+ * Estimate Detail Page
+ * View and edit a specific cost estimate with line items organized by CSI divisions
+ */
+import Layout from '../../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../../components/ProjectModuleNav.tsx';
+import { CSI_SECTIONS, searchCSISections } from '../../../../lib/data/csi-sections';
+
+export const prerender = false;
+
+const { id, estimateId } = Astro.params;
+
+// Pass CSI sections to client-side script
+const csiSectionsJson = JSON.stringify(CSI_SECTIONS);
+---
+
+<Layout title="Estimate Detail - ConstructAid">
+  <!-- Left Sidebar Navigation -->
+  <ProjectModuleNav client:load projectId={id!} />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-900 ml-64">
+    <!-- Top Bar with Breadcrumbs -->
+    <div class="bg-gray-800 border-b border-gray-700 shadow-sm sticky top-16 z-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2 text-sm text-gray-400">
+            <a href="/projects" class="hover:text-white">Projects</a>
+            <span>/</span>
+            <a href={`/projects/${id}`} class="hover:text-white" id="breadcrumb-project-name">Project</a>
+            <span>/</span>
+            <a href={`/projects/${id}/estimating`} class="hover:text-white">Estimating</a>
+            <span>/</span>
+            <span class="text-white font-medium" id="breadcrumb-estimate-title">Estimate</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Loading State -->
+      <div id="loading-state" class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+        <p class="text-gray-400">Loading estimate...</p>
+      </div>
+
+      <!-- Estimate Content (hidden until loaded) -->
+      <div id="estimate-content" class="hidden">
+        <!-- Estimate Header -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700 shadow-ca-sm p-6 mb-6">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h1 class="text-3xl font-heading font-light text-white" id="estimate-title">-</h1>
+                <span id="estimate-status-badge" class="px-3 py-1 rounded text-sm font-medium">-</span>
+              </div>
+              <p class="text-gray-400" id="estimate-number">-</p>
+              <p class="text-gray-400 mt-2" id="estimate-description">-</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm text-gray-400">Total Estimate</p>
+              <p class="text-4xl font-heading font-light text-green-400" id="estimate-total">$0</p>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="flex gap-2 pt-4 border-t border-gray-700">
+            <button
+              onclick="exportEstimate('excel')"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              📊 Export Excel
+            </button>
+            <button
+              onclick="exportEstimate('pdf')"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+            >
+              📄 Export PDF
+            </button>
+            <button
+              onclick="manageAttachments()"
+              class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+            >
+              📎 Attachments
+            </button>
+            <button
+              onclick="updateEstimateStatus()"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              ✏️ Update Status
+            </button>
+          </div>
+        </div>
+
+        <!-- Cost Breakdown Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <p class="text-xs text-gray-400 mb-1">Subtotal</p>
+            <p class="text-xl font-heading font-light text-white" id="stat-subtotal">$0</p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <p class="text-xs text-gray-400 mb-1">Overhead <span id="overhead-pct">(10%)</span></p>
+            <p class="text-xl font-heading font-light text-white" id="stat-overhead">$0</p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <p class="text-xs text-gray-400 mb-1">Profit <span id="profit-pct">(8%)</span></p>
+            <p class="text-xl font-heading font-light text-white" id="stat-profit">$0</p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <p class="text-xs text-gray-400 mb-1">Bond <span id="bond-pct">(2%)</span></p>
+            <p class="text-xl font-heading font-light text-white" id="stat-bond">$0</p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <p class="text-xs text-gray-400 mb-1">Contingency <span id="contingency-pct">(5%)</span></p>
+            <p class="text-xl font-heading font-light text-white" id="stat-contingency">$0</p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <p class="text-xs text-gray-400 mb-1">Line Items</p>
+            <p class="text-xl font-heading font-light text-white" id="stat-line-items">0</p>
+          </div>
+        </div>
+
+        <!-- Add Line Item Button -->
+        <div class="bg-gradient-to-r from-green-900/30 to-blue-900/30 rounded-lg border-2 border-green-700 shadow-ca-sm p-4 mb-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-medium text-white mb-1">Add Line Items</h3>
+              <p class="text-sm text-gray-400">Organize costs by CSI MasterFormat divisions</p>
+            </div>
+            <button
+              onclick="openAddLineItemModal()"
+              class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md font-medium"
+            >
+              + Add Line Item
+            </button>
+          </div>
+        </div>
+
+        <!-- Line Items by CSI Division -->
+        <div id="line-items-container" class="space-y-6">
+          <p class="text-center text-gray-400 py-8">No line items yet. Click "Add Line Item" to get started.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ projectId: id, estimateId, csiSectionsJson }}>
+  let currentEstimate = null;
+  let lineItems = [];
+  let lineItemsByDivision = {};
+
+  // Parse CSI sections data
+  const CSI_SECTIONS_DATA = JSON.parse(csiSectionsJson);
+
+  // Search function for CSI sections
+  function searchCSISections(query, limit = 10) {
+    const lowerQuery = query.toLowerCase().trim();
+
+    if (!lowerQuery) {
+      return CSI_SECTIONS_DATA.slice(0, limit);
+    }
+
+    // Score each section based on match quality
+    const scored = CSI_SECTIONS_DATA.map(section => {
+      let score = 0;
+
+      // Exact code match gets highest priority
+      if (section.code.toLowerCase().includes(lowerQuery)) {
+        score += 1000;
+      }
+
+      // Title match
+      if (section.title.toLowerCase().includes(lowerQuery)) {
+        score += 100;
+      }
+
+      // Keyword matches
+      section.keywords.forEach(keyword => {
+        if (keyword.includes(lowerQuery)) {
+          score += 50;
+        }
+        // Partial word match
+        if (lowerQuery.split(' ').some(word => keyword.includes(word) && word.length > 2)) {
+          score += 10;
+        }
+      });
+
+      return { section, score };
+    });
+
+    // Filter and sort by score
+    return scored
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(item => item.section);
+  }
+
+  // CSI Divisions reference
+  const CSI_DIVISIONS = [
+    { code: '00', title: 'Procurement and Contracting Requirements', color: '#6B7280' },
+    { code: '01', title: 'General Requirements', color: '#8B5CF6' },
+    { code: '02', title: 'Existing Conditions', color: '#EF4444' },
+    { code: '03', title: 'Concrete', color: '#F59E0B' },
+    { code: '04', title: 'Masonry', color: '#D97706' },
+    { code: '05', title: 'Metals', color: '#64748B' },
+    { code: '06', title: 'Wood, Plastics, and Composites', color: '#92400E' },
+    { code: '07', title: 'Thermal and Moisture Protection', color: '#0EA5E9' },
+    { code: '08', title: 'Openings', color: '#6366F1' },
+    { code: '09', title: 'Finishes', color: '#EC4899' },
+    { code: '10', title: 'Specialties', color: '#8B5CF6' },
+    { code: '11', title: 'Equipment', color: '#10B981' },
+    { code: '12', title: 'Furnishings', color: '#F59E0B' },
+    { code: '13', title: 'Special Construction', color: '#EF4444' },
+    { code: '14', title: 'Conveying Equipment', color: '#6366F1' },
+    { code: '21', title: 'Fire Suppression', color: '#DC2626' },
+    { code: '22', title: 'Plumbing', color: '#2563EB' },
+    { code: '23', title: 'HVAC', color: '#0891B2' },
+    { code: '25', title: 'Integrated Automation', color: '#7C3AED' },
+    { code: '26', title: 'Electrical', color: '#FBBF24' },
+    { code: '27', title: 'Communications', color: '#06B6D4' },
+    { code: '28', title: 'Electronic Safety and Security', color: '#F97316' },
+    { code: '31', title: 'Earthwork', color: '#78350F' },
+    { code: '32', title: 'Exterior Improvements', color: '#15803D' },
+    { code: '33', title: 'Utilities', color: '#0369A1' },
+  ];
+
+  // Setup CSI autocomplete functionality
+  function setupCSIAutocomplete(searchInputId, dropdownId, sectionInputId, divisionInputId) {
+    const searchInput = document.getElementById(searchInputId);
+    const dropdown = document.getElementById(dropdownId);
+    const sectionInput = document.getElementById(sectionInputId);
+    const divisionInput = document.getElementById(divisionInputId);
+
+    let selectedIndex = -1;
+
+    // Handle input changes
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value;
+      const results = searchCSISections(query, 15);
+
+      if (results.length > 0 && query.trim()) {
+        renderDropdown(results);
+        dropdown.classList.remove('hidden');
+        selectedIndex = -1;
+      } else {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // Handle keyboard navigation
+    searchInput.addEventListener('keydown', (e) => {
+      const items = dropdown.querySelectorAll('.csi-dropdown-item');
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+        updateSelection(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = Math.max(selectedIndex - 1, 0);
+        updateSelection(items);
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        e.preventDefault();
+        items[selectedIndex]?.click();
+      } else if (e.key === 'Escape') {
+        dropdown.classList.add('hidden');
+        selectedIndex = -1;
+      }
+    });
+
+    // Handle clicking outside
+    document.addEventListener('click', (e) => {
+      if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+        selectedIndex = -1;
+      }
+    });
+
+    // Render dropdown items
+    function renderDropdown(results) {
+      dropdown.innerHTML = results.map((section, index) => `
+        <div class="csi-dropdown-item px-4 py-3 hover:bg-gray-700 cursor-pointer border-b border-gray-700 last:border-b-0" data-code="${section.code}" data-division="${section.division}" data-title="${section.title}">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-green-400 font-mono font-medium">${section.code}</span>
+                <span class="text-xs text-gray-500">Div ${section.division}</span>
+              </div>
+              <p class="text-white text-sm mt-1">${section.title}</p>
+            </div>
+            <svg class="w-4 h-4 text-gray-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </div>
+      `).join('');
+
+      // Add click handlers
+      dropdown.querySelectorAll('.csi-dropdown-item').forEach((item, index) => {
+        item.addEventListener('click', () => {
+          const code = item.getAttribute('data-code');
+          const division = item.getAttribute('data-division');
+          const title = item.getAttribute('data-title');
+
+          searchInput.value = `${code} - ${title}`;
+          sectionInput.value = code;
+          divisionInput.value = division;
+
+          dropdown.classList.add('hidden');
+          selectedIndex = -1;
+
+          // Auto-populate description if empty
+          const descInput = document.getElementById('line-description');
+          if (descInput && !descInput.value.trim()) {
+            descInput.value = title;
+          }
+        });
+      });
+    }
+
+    function updateSelection(items) {
+      items.forEach((item, index) => {
+        if (index === selectedIndex) {
+          item.classList.add('bg-gray-700');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('bg-gray-700');
+        }
+      });
+    }
+  }
+
+  // Load estimate on page load
+  loadEstimate();
+
+  async function loadEstimate() {
+    try {
+      const response = await fetch(`/api/bidding/estimates/${estimateId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        currentEstimate = data.estimate;
+        lineItems = data.lineItems;
+        lineItemsByDivision = data.lineItemsByDivision;
+
+        updateEstimateHeader();
+        renderLineItems();
+
+        // Hide loading, show content
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('estimate-content').classList.remove('hidden');
+      } else {
+        showError('Failed to load estimate');
+      }
+    } catch (error) {
+      console.error('Error loading estimate:', error);
+      showError('Failed to load estimate');
+    }
+  }
+
+  function updateEstimateHeader() {
+    document.getElementById('estimate-title').textContent = currentEstimate.title;
+    document.getElementById('estimate-number').textContent = currentEstimate.estimateNumber || `EST-${currentEstimate.id}`;
+    document.getElementById('estimate-description').textContent = currentEstimate.description || '';
+    document.getElementById('breadcrumb-estimate-title').textContent = currentEstimate.title;
+
+    // Status badge
+    const statusBadge = document.getElementById('estimate-status-badge');
+    const statusColors = {
+      draft: 'bg-gray-700 text-gray-300',
+      in_progress: 'bg-blue-900/50 text-blue-300',
+      under_review: 'bg-yellow-900/50 text-yellow-300',
+      approved: 'bg-green-900/50 text-green-300',
+      rejected: 'bg-red-900/50 text-red-300',
+      finalized: 'bg-purple-900/50 text-purple-300',
+    };
+    statusBadge.className = `px-3 py-1 rounded text-sm font-medium ${statusColors[currentEstimate.status] || statusColors.draft}`;
+    statusBadge.textContent = currentEstimate.status.replace('_', ' ').toUpperCase();
+
+    // Totals
+    document.getElementById('estimate-total').textContent = formatCurrency(currentEstimate.totalEstimatedCost || 0);
+    document.getElementById('stat-subtotal').textContent = formatCurrency(currentEstimate.subtotalCost || 0);
+    document.getElementById('stat-overhead').textContent = formatCurrency(currentEstimate.overhead || 0);
+    document.getElementById('stat-profit').textContent = formatCurrency(currentEstimate.profit || 0);
+    document.getElementById('stat-bond').textContent = formatCurrency(currentEstimate.bondCost || 0);
+    document.getElementById('stat-contingency').textContent = formatCurrency(currentEstimate.contingency || 0);
+    document.getElementById('stat-line-items').textContent = lineItems.length.toString();
+
+    // Percentages
+    document.getElementById('overhead-pct').textContent = `(${currentEstimate.overheadPercentage || 10}%)`;
+    document.getElementById('profit-pct').textContent = `(${currentEstimate.profitPercentage || 8}%)`;
+    document.getElementById('bond-pct').textContent = `(${currentEstimate.bondPercentage || 2}%)`;
+    document.getElementById('contingency-pct').textContent = `(${currentEstimate.contingencyPercentage || 5}%)`;
+  }
+
+  function renderLineItems() {
+    const container = document.getElementById('line-items-container');
+    if (lineItems.length === 0) {
+      container.innerHTML = '<p class="text-center text-gray-400 py-8">No line items yet. Click "Add Line Item" to get started.</p>';
+      return;
+    }
+
+    // Group by division and render
+    let html = '';
+
+    // Sort divisions by code
+    const sortedDivisions = Object.keys(lineItemsByDivision).sort();
+
+    sortedDivisions.forEach(divisionCode => {
+      const items = lineItemsByDivision[divisionCode];
+      const division = CSI_DIVISIONS.find(d => d.code === divisionCode);
+      const divisionTitle = division ? `${division.code} - ${division.title}` : divisionCode;
+      const divisionColor = division ? division.color : '#6B7280';
+
+      const divisionTotal = items.reduce((sum, item) => sum + (item.totalCost || 0), 0);
+
+      html += `
+        <div class="bg-gray-800 rounded-lg border border-gray-700 shadow-ca-sm">
+          <div class="px-6 py-4 border-b border-gray-700" style="background-color: ${divisionColor}15;">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-white">${divisionTitle}</h3>
+              <div class="text-right">
+                <p class="text-sm text-gray-400">${items.length} items</p>
+                <p class="text-xl font-heading font-light text-green-400">${formatCurrency(divisionTotal)}</p>
+              </div>
+            </div>
+          </div>
+          <div class="p-6">
+            <table class="w-full">
+              <thead class="text-xs text-gray-400 border-b border-gray-700">
+                <tr>
+                  <th class="text-left pb-2">Description</th>
+                  <th class="text-right pb-2 w-20">Qty</th>
+                  <th class="text-left pb-2 w-16">Unit</th>
+                  <th class="text-right pb-2 w-32">Unit Cost</th>
+                  <th class="text-right pb-2 w-32">Total Cost</th>
+                  <th class="text-right pb-2 w-24">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="text-sm">
+                ${items.map(item => `
+                  <tr class="border-b border-gray-700 hover:bg-gray-700/30">
+                    <td class="py-3 text-white">
+                      ${item.description}
+                      ${item.csiSection ? `<span class="text-xs text-gray-400 block mt-1">${item.csiSection}</span>` : ''}
+                    </td>
+                    <td class="py-3 text-right text-white">${item.quantity || 1}</td>
+                    <td class="py-3 text-gray-300">${item.unit || '-'}</td>
+                    <td class="py-3 text-right text-white">${formatCurrency(item.unitCost || 0)}</td>
+                    <td class="py-3 text-right font-medium text-green-400">${formatCurrency(item.totalCost || 0)}</td>
+                    <td class="py-3 text-right">
+                      <button onclick="editLineItem(${item.id})" class="text-blue-400 hover:text-blue-300 mr-2">✏️</button>
+                      <button onclick="deleteLineItem(${item.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  }
+
+  function formatCurrency(cents) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(cents / 100);
+  }
+
+  function showError(message) {
+    const loading = document.getElementById('loading-state');
+    loading.innerHTML = `
+      <svg class="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <h3 class="text-lg font-medium text-white mb-2">${message}</h3>
+      <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+        Retry
+      </button>
+    `;
+  }
+
+  function exportEstimate(format) {
+    window.open(`/api/bidding/estimates/${estimateId}/export?format=${format}`, '_blank');
+  }
+
+  async function manageAttachments() {
+    // Load attachments
+    const response = await fetch(`/api/bidding/estimates/${estimateId}/attachments`);
+    const data = await response.json();
+    const attachments = data.attachments || [];
+
+    const modal = document.createElement('div');
+    modal.id = 'attachments-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-xl font-heading font-light text-white">Estimate Attachments</h2>
+          <button onclick="closeAttachmentsModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-6 flex-1 overflow-y-auto">
+          <!-- Upload Section -->
+          <div class="mb-6 p-4 bg-gray-900 rounded-lg border-2 border-dashed border-gray-700 hover:border-green-600 transition-colors">
+            <form id="upload-attachment-form" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Upload File</label>
+                <input
+                  type="file"
+                  id="attachment-file"
+                  class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
+                  required
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Description (optional)</label>
+                <input
+                  type="text"
+                  id="attachment-description"
+                  class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg"
+                  placeholder="e.g., Supplier quote, Blueprint reference..."
+                >
+              </div>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                📎 Upload Attachment
+              </button>
+            </form>
+          </div>
+
+          <!-- Attachments List -->
+          <div>
+            <h3 class="text-lg font-medium text-white mb-4">Attached Files (${attachments.length})</h3>
+            <div id="attachments-list" class="space-y-2">
+              ${attachments.length === 0 ? `
+                <p class="text-gray-400 text-center py-8">No attachments yet. Upload files to get started.</p>
+              ` : attachments.map(att => `
+                <div class="flex items-center justify-between p-4 bg-gray-900 rounded-lg border border-gray-700 hover:border-gray-600">
+                  <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex-shrink-0">
+                      ${getFileIcon(att.mimeType)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-white font-medium truncate">${att.originalName}</p>
+                      <p class="text-sm text-gray-400">${formatFileSize(att.fileSize)} • ${new Date(att.createdAt).toLocaleDateString()}</p>
+                      ${att.description ? `<p class="text-sm text-gray-500 mt-1">${att.description}</p>` : ''}
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <a
+                      href="${att.fileUrl}"
+                      target="_blank"
+                      class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      View
+                    </a>
+                    <button
+                      onclick="deleteAttachment(${att.id})"
+                      class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Handle form submission
+    const form = document.getElementById('upload-attachment-form');
+    form.addEventListener('submit', handleAttachmentUpload);
+  }
+
+  async function handleAttachmentUpload(e) {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('attachment-file');
+    const descriptionInput = document.getElementById('attachment-description');
+    const file = fileInput.files[0];
+
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('projectId', projectId);
+    formData.append('userId', '1'); // TODO: Get from session
+    formData.append('description', descriptionInput.value);
+
+    try {
+      const response = await fetch(`/api/bidding/estimates/${estimateId}/attachments`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Close and reopen modal to refresh list
+        closeAttachmentsModal();
+        await manageAttachments();
+      } else {
+        alert('Failed to upload file: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error uploading attachment:', error);
+      alert('Failed to upload file. Please try again.');
+    }
+  }
+
+  async function deleteAttachment(attachmentId) {
+    if (!confirm('Are you sure you want to delete this attachment?')) return;
+
+    try {
+      const response = await fetch(`/api/bidding/estimates/${estimateId}/attachments`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attachmentId }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Close and reopen modal to refresh list
+        closeAttachmentsModal();
+        await manageAttachments();
+      } else {
+        alert('Failed to delete attachment: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting attachment:', error);
+      alert('Failed to delete attachment. Please try again.');
+    }
+  }
+
+  function closeAttachmentsModal() {
+    const modal = document.getElementById('attachments-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  function getFileIcon(mimeType) {
+    if (mimeType.includes('pdf')) {
+      return '<svg class="w-10 h-10 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>';
+    } else if (mimeType.includes('image')) {
+      return '<svg class="w-10 h-10 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg>';
+    } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+      return '<svg class="w-10 h-10 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>';
+    } else if (mimeType.includes('word') || mimeType.includes('document')) {
+      return '<svg class="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>';
+    } else {
+      return '<svg class="w-10 h-10 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>';
+    }
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  function updateEstimateStatus() {
+    const modal = document.createElement('div');
+    modal.id = 'update-status-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-xl font-heading font-light text-white">Update Estimate Status</h2>
+          <button onclick="closeStatusModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <form id="update-status-form" class="p-6">
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-300 mb-3">Select New Status</label>
+            <div class="space-y-2">
+              <label class="flex items-center p-3 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                <input type="radio" name="status" value="draft" ${currentEstimate.status === 'draft' ? 'checked' : ''} class="mr-3">
+                <div class="flex-1">
+                  <span class="text-white font-medium">Draft</span>
+                  <p class="text-xs text-gray-400">Initial working version</p>
+                </div>
+              </label>
+
+              <label class="flex items-center p-3 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                <input type="radio" name="status" value="in_progress" ${currentEstimate.status === 'in_progress' ? 'checked' : ''} class="mr-3">
+                <div class="flex-1">
+                  <span class="text-white font-medium">In Progress</span>
+                  <p class="text-xs text-gray-400">Actively being worked on</p>
+                </div>
+              </label>
+
+              <label class="flex items-center p-3 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                <input type="radio" name="status" value="under_review" ${currentEstimate.status === 'under_review' ? 'checked' : ''} class="mr-3">
+                <div class="flex-1">
+                  <span class="text-white font-medium">Under Review</span>
+                  <p class="text-xs text-gray-400">Being reviewed by team</p>
+                </div>
+              </label>
+
+              <label class="flex items-center p-3 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                <input type="radio" name="status" value="approved" ${currentEstimate.status === 'approved' ? 'checked' : ''} class="mr-3">
+                <div class="flex-1">
+                  <span class="text-white font-medium">Approved</span>
+                  <p class="text-xs text-gray-400">Approved for bid submission</p>
+                </div>
+              </label>
+
+              <label class="flex items-center p-3 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                <input type="radio" name="status" value="rejected" ${currentEstimate.status === 'rejected' ? 'checked' : ''} class="mr-3">
+                <div class="flex-1">
+                  <span class="text-white font-medium">Rejected</span>
+                  <p class="text-xs text-gray-400">Not approved for submission</p>
+                </div>
+              </label>
+
+              <label class="flex items-center p-3 border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                <input type="radio" name="status" value="finalized" ${currentEstimate.status === 'finalized' ? 'checked' : ''} class="mr-3">
+                <div class="flex-1">
+                  <span class="text-white font-medium">Finalized</span>
+                  <p class="text-xs text-gray-400">Final version, locked</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-300 mb-2">Notes (Optional)</label>
+            <textarea id="status-notes" rows="3" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="Add any notes about this status change..."></textarea>
+          </div>
+
+          <div class="flex justify-end gap-3">
+            <button type="button" onclick="closeStatusModal()" class="px-4 py-2 text-gray-300 bg-gray-900 border border-gray-600 rounded-lg hover:bg-gray-700">
+              Cancel
+            </button>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+              Update Status
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('update-status-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleUpdateStatus();
+    });
+  }
+
+  async function handleUpdateStatus() {
+    const selectedStatus = document.querySelector('input[name="status"]:checked').value;
+    const notes = document.getElementById('status-notes').value;
+
+    try {
+      const response = await fetch('/api/bidding/estimates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: estimateId,
+          status: selectedStatus,
+          notes: notes ? `${currentEstimate.notes || ''}\n\nStatus changed to ${selectedStatus}: ${notes}` : currentEstimate.notes,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeStatusModal();
+        await loadEstimate(); // Reload to show updated status
+      } else {
+        alert('Failed to update status: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status. Please try again.');
+    }
+  }
+
+  function closeStatusModal() {
+    const modal = document.getElementById('update-status-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  function openAddLineItemModal() {
+    const modal = document.createElement('div');
+    modal.id = 'add-line-item-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-heading font-light text-white">Add Line Item</h2>
+          <button onclick="closeLineItemModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <form id="line-item-form" class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-1">CSI Section / Scope of Work *</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="line-csi-search"
+                  class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg"
+                  placeholder="Type CSI code or search by work type (e.g., 'concrete', 'drywall', '03 30 00')..."
+                  autocomplete="off"
+                >
+                <input type="hidden" id="line-csi-section">
+                <input type="hidden" id="line-csi-division">
+                <div id="csi-dropdown" class="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+                  <!-- Dropdown items will be populated by JavaScript -->
+                </div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Start typing to search CSI codes or scope of work descriptions</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Description *</label>
+              <textarea id="line-description" required rows="2" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="Item description..."></textarea>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Quantity</label>
+              <input type="number" id="line-quantity" value="1" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Unit</label>
+              <select id="line-unit" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg">
+                <option value="">Select unit</option>
+                <option value="EA">EA - Each</option>
+                <option value="SF">SF - Square Foot</option>
+                <option value="LF">LF - Linear Foot</option>
+                <option value="CY">CY - Cubic Yard</option>
+                <option value="SY">SY - Square Yard</option>
+                <option value="TON">TON - Ton</option>
+                <option value="LS">LS - Lump Sum</option>
+                <option value="HR">HR - Hour</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Unit Cost</label>
+              <input type="number" id="line-unit-cost" value="0" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Labor Cost</label>
+              <input type="number" id="line-labor-cost" value="0" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Material Cost</label>
+              <input type="number" id="line-material-cost" value="0" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Equipment Cost</label>
+              <input type="number" id="line-equipment-cost" value="0" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Subcontractor Cost</label>
+              <input type="number" id="line-subcontractor-cost" value="0" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Takeoff Reference</label>
+              <input type="text" id="line-takeoff-ref" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="Drawing reference, notes...">
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-gray-700 flex justify-end gap-3">
+            <button type="button" onclick="closeLineItemModal()" class="px-4 py-2 text-gray-300 bg-gray-900 border border-gray-600 rounded-lg hover:bg-gray-700">
+              Cancel
+            </button>
+            <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+              Add Line Item
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Initialize CSI autocomplete
+    setupCSIAutocomplete('line-csi-search', 'csi-dropdown', 'line-csi-section', 'line-csi-division');
+
+    document.getElementById('line-item-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleAddLineItem();
+    });
+  }
+
+  async function handleAddLineItem() {
+    const lineItemData = {
+      costEstimateId: parseInt(estimateId),
+      csiDivision: document.getElementById('line-csi-division').value,
+      csiSection: document.getElementById('line-csi-section').value,
+      description: document.getElementById('line-description').value,
+      quantity: parseFloat(document.getElementById('line-quantity').value),
+      unit: document.getElementById('line-unit').value,
+      unitCost: Math.round(parseFloat(document.getElementById('line-unit-cost').value) * 100),
+      laborCost: Math.round(parseFloat(document.getElementById('line-labor-cost').value) * 100),
+      materialCost: Math.round(parseFloat(document.getElementById('line-material-cost').value) * 100),
+      equipmentCost: Math.round(parseFloat(document.getElementById('line-equipment-cost').value) * 100),
+      subcontractorCost: Math.round(parseFloat(document.getElementById('line-subcontractor-cost').value) * 100),
+      takeoffReference: document.getElementById('line-takeoff-ref').value,
+    };
+
+    try {
+      const response = await fetch('/api/bidding/line-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lineItemData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeLineItemModal();
+        await loadEstimate(); // Reload to show new item
+      } else {
+        alert('Failed to add line item: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding line item:', error);
+      alert('Failed to add line item. Please try again.');
+    }
+  }
+
+  function closeLineItemModal() {
+    const modal = document.getElementById('add-line-item-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  async function deleteLineItem(lineItemId) {
+    if (!confirm('Are you sure you want to delete this line item?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/bidding/line-items?id=${lineItemId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await loadEstimate(); // Reload to show updated totals
+      } else {
+        alert('Failed to delete line item: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting line item:', error);
+      alert('Failed to delete line item. Please try again.');
+    }
+  }
+
+  function editLineItem(lineItemId) {
+    const lineItem = lineItems.find(item => item.id === lineItemId);
+    if (!lineItem) {
+      alert('Line item not found');
+      return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'edit-line-item-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-heading font-light text-white">Edit Line Item</h2>
+          <button onclick="closeEditLineItemModal()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <form id="edit-line-item-form" class="p-6">
+          <input type="hidden" id="edit-line-id" value="${lineItem.id}">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-1">CSI Section / Scope of Work *</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="edit-line-csi-search"
+                  value="${lineItem.csiSection ? lineItem.csiSection + (lineItem.description ? ' - ' + lineItem.description.substring(0, 50) : '') : ''}"
+                  class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg"
+                  placeholder="Type CSI code or search by work type..."
+                  autocomplete="off"
+                >
+                <input type="hidden" id="edit-line-csi-section" value="${lineItem.csiSection || ''}">
+                <input type="hidden" id="edit-line-csi-division" value="${lineItem.csiDivision || ''}">
+                <div id="edit-csi-dropdown" class="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+                  <!-- Dropdown items will be populated by JavaScript -->
+                </div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Start typing to search CSI codes or scope of work descriptions</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Description *</label>
+              <textarea id="edit-line-description" required rows="2" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="Item description...">${lineItem.description || ''}</textarea>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Quantity</label>
+              <input type="number" id="edit-line-quantity" value="${lineItem.quantity || 1}" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Unit</label>
+              <select id="edit-line-unit" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg">
+                <option value="">Select unit</option>
+                <option value="EA" ${lineItem.unit === 'EA' ? 'selected' : ''}>EA - Each</option>
+                <option value="SF" ${lineItem.unit === 'SF' ? 'selected' : ''}>SF - Square Foot</option>
+                <option value="LF" ${lineItem.unit === 'LF' ? 'selected' : ''}>LF - Linear Foot</option>
+                <option value="CY" ${lineItem.unit === 'CY' ? 'selected' : ''}>CY - Cubic Yard</option>
+                <option value="SY" ${lineItem.unit === 'SY' ? 'selected' : ''}>SY - Square Yard</option>
+                <option value="TON" ${lineItem.unit === 'TON' ? 'selected' : ''}>TON - Ton</option>
+                <option value="LS" ${lineItem.unit === 'LS' ? 'selected' : ''}>LS - Lump Sum</option>
+                <option value="HR" ${lineItem.unit === 'HR' ? 'selected' : ''}>HR - Hour</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Unit Cost</label>
+              <input type="number" id="edit-line-unit-cost" value="${(lineItem.unitCost || 0) / 100}" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Labor Cost</label>
+              <input type="number" id="edit-line-labor-cost" value="${(lineItem.laborCost || 0) / 100}" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Material Cost</label>
+              <input type="number" id="edit-line-material-cost" value="${(lineItem.materialCost || 0) / 100}" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Equipment Cost</label>
+              <input type="number" id="edit-line-equipment-cost" value="${(lineItem.equipmentCost || 0) / 100}" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Subcontractor Cost</label>
+              <input type="number" id="edit-line-subcontractor-cost" value="${(lineItem.subcontractorCost || 0) / 100}" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="0.00">
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Takeoff Reference</label>
+              <input type="text" id="edit-line-takeoff-ref" value="${lineItem.takeoffReference || ''}" class="w-full px-3 py-2 border border-gray-600 bg-gray-900 text-white rounded-lg" placeholder="Drawing reference, notes...">
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-gray-700 flex justify-end gap-3">
+            <button type="button" onclick="closeEditLineItemModal()" class="px-4 py-2 text-gray-300 bg-gray-900 border border-gray-600 rounded-lg hover:bg-gray-700">
+              Cancel
+            </button>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+              Update Line Item
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Initialize CSI autocomplete for edit modal
+    setupCSIAutocomplete('edit-line-csi-search', 'edit-csi-dropdown', 'edit-line-csi-section', 'edit-line-csi-division');
+
+    document.getElementById('edit-line-item-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleEditLineItem();
+    });
+  }
+
+  async function handleEditLineItem() {
+    const lineItemData = {
+      id: parseInt(document.getElementById('edit-line-id').value),
+      csiDivision: document.getElementById('edit-line-csi-division').value,
+      csiSection: document.getElementById('edit-line-csi-section').value,
+      description: document.getElementById('edit-line-description').value,
+      quantity: parseFloat(document.getElementById('edit-line-quantity').value),
+      unit: document.getElementById('edit-line-unit').value,
+      unitCost: Math.round(parseFloat(document.getElementById('edit-line-unit-cost').value) * 100),
+      laborCost: Math.round(parseFloat(document.getElementById('edit-line-labor-cost').value) * 100),
+      materialCost: Math.round(parseFloat(document.getElementById('edit-line-material-cost').value) * 100),
+      equipmentCost: Math.round(parseFloat(document.getElementById('edit-line-equipment-cost').value) * 100),
+      subcontractorCost: Math.round(parseFloat(document.getElementById('edit-line-subcontractor-cost').value) * 100),
+      takeoffReference: document.getElementById('edit-line-takeoff-ref').value,
+    };
+
+    try {
+      const response = await fetch('/api/bidding/line-items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lineItemData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeEditLineItemModal();
+        await loadEstimate(); // Reload to show updated item
+      } else {
+        alert('Failed to update line item: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating line item:', error);
+      alert('Failed to update line item. Please try again.');
+    }
+  }
+
+  function closeEditLineItemModal() {
+    const modal = document.getElementById('edit-line-item-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+
+  // Make functions globally available
+  window.exportEstimate = exportEstimate;
+  window.manageAttachments = manageAttachments;
+  window.updateEstimateStatus = updateEstimateStatus;
+  window.closeStatusModal = closeStatusModal;
+  window.openAddLineItemModal = openAddLineItemModal;
+  window.closeLineItemModal = closeLineItemModal;
+  window.closeEditLineItemModal = closeEditLineItemModal;
+  window.deleteLineItem = deleteLineItem;
+  window.editLineItem = editLineItem;
+  window.closeAttachmentsModal = closeAttachmentsModal;
+  window.deleteAttachment = deleteAttachment;
+</script>

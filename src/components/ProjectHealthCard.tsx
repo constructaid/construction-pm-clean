@@ -89,7 +89,7 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
     switch (status) {
       case 'completed': return '#3D9991';
       case 'in_progress': return '#4BAAD8';
-      case 'planning': return '#FF5E15';
+      case 'planning': return '#FF6600';
       case 'on_hold': return '#F1F1F1';
       case 'cancelled': return '#1F1F1F';
       default: return '#F1F1F1';
@@ -116,15 +116,15 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
   };
 
   return (
-    <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+    <div class="bg-gray-900 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-800">
       {/* Project Header */}
-      <div class="p-6 border-b border-gray-200">
+      <div class="p-6 border-b border-gray-800">
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1">
-            <h3 class="text-xl font-bold text-gray-900 mb-1">
+            <h3 class="text-xl font-bold text-white mb-1">
               {props.project.name}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-400">
               {props.project.projectNumber} • {props.project.address || props.project.city || 'No location'}
             </p>
           </div>
@@ -138,11 +138,11 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
 
         {/* Progress Bar */}
         <div class="mt-4">
-          <div class="flex justify-between text-xs text-gray-600 mb-1">
+          <div class="flex justify-between text-xs text-gray-400 mb-1">
             <span>Overall Progress</span>
-            <span class="font-semibold">{props.project.progressPercentage || 0}%</span>
+            <span class="font-semibold text-white">{props.project.progressPercentage || 0}%</span>
           </div>
-          <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="w-full bg-gray-800 rounded-full h-2">
             <div
               class="h-2 rounded-full transition-all duration-500"
               style={`width: ${props.project.progressPercentage || 0}%; background-color: #3D9991;`}
@@ -153,7 +153,7 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
 
       {/* Health Indicators */}
       <div class="p-6">
-        <h4 class="text-sm font-semibold text-gray-700 mb-3">Project Health</h4>
+        <h4 class="text-sm font-semibold text-gray-300 mb-3">Project Health</h4>
 
         <Show when={!healthData().loading}>
           <div class="grid grid-cols-2 gap-3 mb-4">
@@ -215,16 +215,16 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
         </Show>
 
         {/* Budget Summary */}
-        <div class="bg-gray-50 rounded-lg p-3 mb-4">
+        <div class="bg-gray-800 rounded-lg p-3 mb-4">
           <div class="flex justify-between items-center">
-            <span class="text-xs font-medium text-gray-700">Budget</span>
-            <span class="text-sm font-bold text-gray-900">
+            <span class="text-xs font-medium text-gray-300">Budget</span>
+            <span class="text-sm font-bold text-white">
               {formatCurrency((props.project.totalBudget || 0) * 100)}
             </span>
           </div>
           <div class="flex justify-between items-center mt-1">
-            <span class="text-xs text-gray-600">Remaining</span>
-            <span class="text-sm font-semibold text-green-600">
+            <span class="text-xs text-gray-400">Remaining</span>
+            <span class="text-sm font-semibold text-green-400">
               {formatCurrency((props.project.remainingBudget || props.project.totalBudget || 0) * 100)}
             </span>
           </div>
@@ -234,7 +234,7 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
         <a
           href={`/projects/${props.project.id}`}
           class="block w-full text-center text-white py-3 px-4 rounded-lg font-semibold transition-all hover:opacity-90"
-          style="background-color: #FF5E15;"
+          style="background-color: #FF6600;"
         >
           Enter Project →
         </a>

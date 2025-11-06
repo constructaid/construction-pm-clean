@@ -1,8 +1,33 @@
-import { createSignal } from 'solid-js';
+import { createSignal, createEffect, onMount } from 'solid-js';
 
 export function Navbar() {
   const [isUserTypeOpen, setIsUserTypeOpen] = createSignal(false);
   const [selectedUserType, setSelectedUserType] = createSignal('General Contractor');
+  const [showHR, setShowHR] = createSignal(false);
+  const [hrStatus, setHrStatus] = createSignal<'trial' | 'active' | null>(null);
+
+  // Check module access on mount
+  onMount(async () => {
+    try {
+      const response = await fetch('/api/company/modules?companyId=1');
+      const data = await response.json();
+
+      if (data.success) {
+        const hrModule = data.data.modules.find((m: any) => m.moduleName === 'hr');
+        if (hrModule && hrModule.isEnabled) {
+          // Check if user is internal (for demo, assume General Contractor is internal)
+          const isInternal = selectedUserType() !== 'Owner' &&
+                           selectedUserType() !== 'Design Team' &&
+                           selectedUserType() !== 'Guest User';
+
+          setShowHR(isInternal);
+          setHrStatus(hrModule.isTrialing ? 'trial' : 'active');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking module access:', error);
+    }
+  });
 
   const userTypes = [
     { name: 'Owner', icon: '🏢', path: '/dashboard/owner' },
@@ -15,6 +40,13 @@ export function Navbar() {
   const handleUserTypeChange = (userType: { name: string; path: string }) => {
     setSelectedUserType(userType.name);
     setIsUserTypeOpen(false);
+
+    // Update HR visibility based on user type
+    const isInternal = userType.name !== 'Owner' &&
+                     userType.name !== 'Design Team' &&
+                     userType.name !== 'Guest User';
+    setShowHR(isInternal && hrStatus() !== null);
+
     window.location.href = userType.path;
   };
 
@@ -26,8 +58,8 @@ export function Navbar() {
           <div class="flex items-center space-x-8">
             <a href="/" class="group">
               <img
-                src="/constructaid-logo.png"
-                alt="ConstructAid LLC"
+                src="/ConstructHub-logo.png"
+                alt="ConstructHub"
                 class="h-14 w-auto transition-transform group-hover:scale-105"
               />
             </a>
@@ -65,6 +97,20 @@ export function Navbar() {
               >
                 Reports
               </a>
+              {showHR() && (
+                <a
+                  href="/hr"
+                  class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-ca-orange hover:bg-gray-800 rounded transition-all flex items-center gap-2 relative"
+                >
+                  <span>👥</span>
+                  <span>HR</span>
+                  {hrStatus() === 'trial' && (
+                    <span class="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 rounded-full shadow-lg animate-pulse">
+                      TRIAL
+                    </span>
+                  )}
+                </a>
+              )}
             </div>
           </div>
 

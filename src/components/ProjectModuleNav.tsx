@@ -209,6 +209,20 @@ export default function ProjectModuleNav(props: ProjectModuleNavProps) {
         },
       ]
     },
+    {
+      name: 'Closeout',
+      icon: '✅',
+      defaultExpanded: false,
+      modules: [
+        {
+          name: 'Closeout',
+          icon: '📋',
+          color: '#10B981',
+          href: `/projects/${props.projectId}/closeout`,
+          description: 'Project Closeout Tracking'
+        },
+      ]
+    },
   ];
 
   // State for collapsed categories

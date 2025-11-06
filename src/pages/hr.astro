@@ -1,0 +1,377 @@
+---
+/**
+ * HR Dashboard - Main Page
+ * Employee management, PTO tracking, certifications, and performance reviews
+ */
+import Layout from '../layouts/Layout.astro';
+import { Navbar } from '../components/Navbar';
+
+export const prerender = false;
+---
+
+<Layout title="Human Resources - ConstructHub">
+  <Navbar client:load />
+
+  <div class="min-h-screen bg-gray-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Page Header -->
+      <div class="mb-8">
+        <div class="flex items-center gap-4 mb-2">
+          <div class="bg-purple-600 text-white p-3 rounded-lg shadow-lg">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold text-white">Human Resources</h1>
+            <p class="text-gray-400">Employee management, PTO, certifications, and performance tracking</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="mb-6">
+        <nav class="flex space-x-4 border-b border-gray-700 overflow-x-auto">
+          <button
+            data-tab="overview"
+            class="tab-button px-4 py-3 font-medium border-b-2 border-purple-600 text-purple-400 whitespace-nowrap"
+          >
+            Overview
+          </button>
+          <button
+            data-tab="employees"
+            class="tab-button px-4 py-3 font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-300 whitespace-nowrap"
+          >
+            Employees
+          </button>
+          <button
+            data-tab="pto"
+            class="tab-button px-4 py-3 font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-300 whitespace-nowrap"
+          >
+            PTO Management
+          </button>
+          <button
+            data-tab="certifications"
+            class="tab-button px-4 py-3 font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-300 whitespace-nowrap"
+          >
+            Certifications
+          </button>
+          <button
+            data-tab="performance"
+            class="tab-button px-4 py-3 font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-300 whitespace-nowrap"
+          >
+            Performance
+          </button>
+        </nav>
+      </div>
+
+      <!-- Tab Content -->
+      <div id="tab-content">
+        <!-- Overview Tab -->
+        <div id="overview-content" class="tab-content">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div class="flex items-center justify-between mb-4">
+                <div class="bg-blue-500/20 p-3 rounded-lg">
+                  <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-2xl font-bold text-white mb-1" id="stat-total-employees">-</p>
+              <p class="text-sm text-gray-400">Total Employees</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div class="flex items-center justify-between mb-4">
+                <div class="bg-green-500/20 p-3 rounded-lg">
+                  <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-2xl font-bold text-white mb-1" id="stat-active-employees">-</p>
+              <p class="text-sm text-gray-400">Active Employees</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div class="flex items-center justify-between mb-4">
+                <div class="bg-yellow-500/20 p-3 rounded-lg">
+                  <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-2xl font-bold text-white mb-1" id="stat-pending-pto">-</p>
+              <p class="text-sm text-gray-400">Pending PTO Requests</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <div class="flex items-center justify-between mb-4">
+                <div class="bg-red-500/20 p-3 rounded-lg">
+                  <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-2xl font-bold text-white mb-1" id="stat-expiring-certs">-</p>
+              <p class="text-sm text-gray-400">Expiring Certifications</p>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <button
+              onclick="switchTab('employees')"
+              class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-purple-600 transition text-left"
+            >
+              <div class="flex items-center gap-4">
+                <div class="bg-purple-600 text-white p-3 rounded-lg">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">Add Employee</h3>
+                  <p class="text-sm text-gray-400">Onboard new team member</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onclick="switchTab('pto')"
+              class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-blue-600 transition text-left"
+            >
+              <div class="flex items-center gap-4">
+                <div class="bg-blue-600 text-white p-3 rounded-lg">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">Review PTO</h3>
+                  <p class="text-sm text-gray-400">Approve time-off requests</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onclick="switchTab('certifications')"
+              class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-orange-600 transition text-left"
+            >
+              <div class="flex items-center gap-4">
+                <div class="bg-orange-600 text-white p-3 rounded-lg">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">Track Certifications</h3>
+                  <p class="text-sm text-gray-400">Monitor expiring licenses</p>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Recent Activity / Alerts -->
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-bold text-white mb-4">Alerts & Notifications</h3>
+            <div class="space-y-3" id="alerts-container">
+              <div class="text-center py-8 text-gray-400">
+                <p>Loading alerts...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employees Tab -->
+        <div id="employees-content" class="tab-content hidden">
+          <div id="employees-container">Loading employees...</div>
+        </div>
+
+        <!-- PTO Tab -->
+        <div id="pto-content" class="tab-content hidden">
+          <div id="pto-container">Loading PTO requests...</div>
+        </div>
+
+        <!-- Certifications Tab -->
+        <div id="certifications-content" class="tab-content hidden">
+          <div id="certifications-container">Loading certifications...</div>
+        </div>
+
+        <!-- Performance Tab -->
+        <div id="performance-content" class="tab-content hidden">
+          <div class="bg-gray-800 rounded-lg p-12 border border-gray-700 text-center">
+            <div class="text-6xl mb-4">📊</div>
+            <h3 class="text-2xl font-bold text-white mb-2">Performance Reviews</h3>
+            <p class="text-gray-400 mb-4">Track employee performance, goals, and development</p>
+            <p class="text-sm text-gray-500">Coming soon in Phase 1 - Performance review system with ratings and feedback</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    function switchTab(tabName: string) {
+      // Update buttons
+      tabButtons.forEach(btn => {
+        btn.classList.remove('border-purple-600', 'text-purple-400');
+        btn.classList.add('border-transparent', 'text-gray-400');
+      });
+
+      const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
+      if (activeButton) {
+        activeButton.classList.remove('border-transparent', 'text-gray-400');
+        activeButton.classList.add('border-purple-600', 'text-purple-400');
+      }
+
+      // Update content
+      tabContents.forEach(content => {
+        content.classList.add('hidden');
+      });
+
+      const activeContent = document.getElementById(`${tabName}-content`);
+      if (activeContent) {
+        activeContent.classList.remove('hidden');
+      }
+
+      // Load data for the tab
+      if (tabName === 'employees') {
+        loadEmployees();
+      } else if (tabName === 'pto') {
+        loadPTO();
+      } else if (tabName === 'certifications') {
+        loadCertifications();
+      }
+    }
+
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const tabName = button.getAttribute('data-tab');
+        if (tabName) switchTab(tabName);
+      });
+    });
+
+    // Load overview data
+    async function loadOverview() {
+      try {
+        // Load employee stats
+        const empResponse = await fetch('/api/hr/employees');
+        const empData = await empResponse.json();
+
+        if (empData.success) {
+          document.getElementById('stat-total-employees')!.textContent = empData.data.stats.totalEmployees;
+          document.getElementById('stat-active-employees')!.textContent = empData.data.stats.activeEmployees;
+        }
+
+        // Load PTO stats
+        const ptoResponse = await fetch('/api/hr/pto');
+        const ptoData = await ptoResponse.json();
+
+        if (ptoData.success) {
+          document.getElementById('stat-pending-pto')!.textContent = ptoData.data.stats.pending;
+        }
+
+        // Load certification stats
+        const certResponse = await fetch('/api/hr/certifications');
+        const certData = await certResponse.json();
+
+        if (certData.success) {
+          document.getElementById('stat-expiring-certs')!.textContent = certData.data.stats.expiringSoon;
+
+          // Show alerts
+          renderAlerts(certData.data.certifications, ptoData.data.requests);
+        }
+      } catch (error) {
+        console.error('Error loading overview:', error);
+      }
+    }
+
+    function renderAlerts(certifications: any[], ptoRequests: any[]) {
+      const container = document.getElementById('alerts-container');
+      if (!container) return;
+
+      const alerts = [];
+
+      // Expiring certifications
+      const expiring = certifications.filter(c => c.status === 'expiring_soon');
+      expiring.forEach(cert => {
+        alerts.push({
+          type: 'warning',
+          icon: '⚠️',
+          message: `${cert.employeeName}'s ${cert.certificationName} expires in ${cert.daysUntilExpiration} days`,
+          action: 'View Certifications',
+          onClick: () => switchTab('certifications'),
+        });
+      });
+
+      // Pending PTO
+      ptoRequests.filter(r => r.status === 'pending').forEach(pto => {
+        alerts.push({
+          type: 'info',
+          icon: '📅',
+          message: `${pto.employeeName} requested ${pto.type} leave (${pto.startDate} to ${pto.endDate})`,
+          action: 'Review',
+          onClick: () => switchTab('pto'),
+        });
+      });
+
+      if (alerts.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-400"><p>No alerts at this time</p></div>';
+        return;
+      }
+
+      container.innerHTML = alerts.slice(0, 5).map(alert => `
+        <div class="flex items-center justify-between p-4 bg-gray-900 rounded-lg border ${
+          alert.type === 'warning' ? 'border-yellow-500/50' : 'border-blue-500/50'
+        }">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${alert.icon}</span>
+            <p class="text-white">${alert.message}</p>
+          </div>
+          <button
+            onclick="switchTab('${alert.action === 'View Certifications' ? 'certifications' : 'pto'}')"
+            class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition"
+          >
+            ${alert.action}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function loadEmployees() {
+      // Will implement detailed employee list in next step
+      const container = document.getElementById('employees-container');
+      if (!container) return;
+
+      container.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Employee directory loading...</p></div>';
+    }
+
+    async function loadPTO() {
+      // Will implement detailed PTO management in next step
+      const container = document.getElementById('pto-container');
+      if (!container) return;
+
+      container.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">PTO management loading...</p></div>';
+    }
+
+    async function loadCertifications() {
+      // Will implement detailed certifications tracker in next step
+      const container = document.getElementById('certifications-container');
+      if (!container) return;
+
+      container.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Certifications tracker loading...</p></div>';
+    }
+
+    // Make switchTab globally available
+    (window as any).switchTab = switchTab;
+
+    // Initial load
+    loadOverview();
+  </script>
+</Layout>

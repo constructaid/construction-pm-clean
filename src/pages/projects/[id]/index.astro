@@ -5,6 +5,8 @@
  */
 import Layout from '../../../layouts/Layout.astro';
 import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import InvitationModal from '../../../components/InvitationModal.tsx';
+import PendingAccessRequests from '../../../components/PendingAccessRequests.tsx';
 
 export const prerender = false;
 
@@ -21,22 +23,22 @@ const { id } = Astro.params;
   <ProjectModuleNav client:load projectId={id!} />
 
   <!-- Main Content Area with Left Margin for Sidebar -->
-  <div class="min-h-screen bg-gray-50 ml-64">
+  <div class="min-h-screen bg-gray-900 ml-64">
     <!-- Top Bar with Project Selector -->
-    <div class="bg-white border-b border-gray-200 shadow-sm sticky top-16 z-20">
+    <div class="bg-gray-800 border-b border-gray-700 shadow-sm sticky top-16 z-20">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div class="flex items-center justify-between">
           <!-- Project Dropdown -->
           <div class="relative" id="project-selector-container">
             <button
               id="project-dropdown-button"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-gray-400 transition-colors font-medium text-gray-900"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 border-2 border-gray-600 rounded-lg hover:border-gray-500 transition-colors font-medium text-white"
             >
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
               </svg>
               <span id="current-project-name">Loading...</span>
-              <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
               </svg>
             </button>
@@ -44,19 +46,19 @@ const { id } = Astro.params;
             <!-- Dropdown Menu (Hidden by default) -->
             <div
               id="project-dropdown-menu"
-              class="hidden absolute left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-y-auto z-30"
+              class="hidden absolute left-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700 max-h-96 overflow-y-auto z-30"
             >
               <div class="p-2">
                 <input
                   type="text"
                   id="project-search"
                   placeholder="Search projects..."
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div id="project-list" class="py-1">
-                <div class="px-4 py-8 text-center text-gray-500">
-                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+                <div class="px-4 py-8 text-center text-gray-400">
+                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
                   Loading projects...
                 </div>
               </div>
@@ -66,7 +68,7 @@ const { id } = Astro.params;
           <!-- Back button -->
           <a
             href="/projects"
-            class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            class="inline-flex items-center text-gray-300 hover:text-white transition-colors"
           >
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -78,15 +80,21 @@ const { id } = Astro.params;
     </div>
 
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Pending Access Requests (for PMs) -->
+      <PendingAccessRequests client:load projectId={parseInt(id!)} />
+
       <!-- Project Dashboard Content -->
       <div id="project-dashboard" data-project-id={id}>
         <div class="text-center py-12">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style="border-color: #3D9991;"></div>
-          <p class="mt-4 text-gray-600">Loading project details...</p>
+          <p class="mt-4 text-gray-400">Loading project details...</p>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Invitation Modal Container -->
+  <div id="invitation-modal-root"></div>
 </Layout>
 
 <script>
@@ -131,8 +139,8 @@ const { id } = Astro.params;
     fetch('/api/projects?userId=1')
       .then(response => response.json())
       .then(data => {
-        if (data.success && data.projects) {
-          allProjects = data.projects;
+        if (data.success && data.data?.projects) {
+          allProjects = data.data.projects;
           renderProjectList(allProjects);
         }
       })
@@ -150,7 +158,7 @@ const { id } = Astro.params;
     if (!projectList) return;
 
     if (projects.length === 0) {
-      projectList.innerHTML = '<div class="px-4 py-3 text-gray-500 text-sm">No projects found</div>';
+      projectList.innerHTML = '<div class="px-4 py-3 text-gray-400 text-sm">No projects found</div>';
       return;
     }
 
@@ -161,15 +169,15 @@ const { id } = Astro.params;
       return `
         <a
           href="/projects/${project.id}"
-          class="block px-4 py-3 hover:bg-gray-50 transition-colors ${isActive ? 'bg-blue-50' : ''}"
+          class="block px-4 py-3 hover:bg-gray-700 transition-colors ${isActive ? 'bg-gray-700' : ''}"
         >
           <div class="flex items-center justify-between">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">
-                <p class="font-medium text-gray-900 truncate">${project.name}</p>
-                ${isActive ? '<span class="text-xs text-blue-600 font-medium">Current</span>' : ''}
+                <p class="font-medium text-white truncate">${project.name}</p>
+                ${isActive ? '<span class="text-xs text-blue-400 font-medium">Current</span>' : ''}
               </div>
-              <p class="text-xs text-gray-500">${project.projectNumber}</p>
+              <p class="text-xs text-gray-400">${project.projectNumber}</p>
             </div>
             <span class="ml-2 px-2 py-1 rounded text-xs font-medium" style="background-color: ${statusColor}20; color: ${statusColor};">
               ${project.status.replace('_', ' ')}
@@ -196,15 +204,15 @@ const { id } = Astro.params;
     fetch(`/api/projects/${projectId}`)
       .then(response => response.json())
       .then(data => {
-        if (data.success && data.project) {
+        if (data.success && data.data?.project) {
           // Store project data globally
-          currentProjectData = data.project;
+          currentProjectData = data.data.project;
 
-          renderProjectDashboard(data.project, dashboardElement);
+          renderProjectDashboard(data.data.project, dashboardElement);
           // Update dropdown button with current project name
           const projectNameEl = document.getElementById('current-project-name');
           if (projectNameEl) {
-            projectNameEl.textContent = data.project.name;
+            projectNameEl.textContent = data.data.project.name;
           }
         } else {
           renderError('Project not found', dashboardElement);
@@ -232,7 +240,7 @@ const { id } = Astro.params;
     switch (status) {
       case 'completed': return '#3D9991';
       case 'in_progress': return '#4BAAD8';
-      case 'planning': return '#FF5E15';
+      case 'planning': return '#FF6600';
       case 'on_hold': return '#F1F1F1';
       case 'cancelled': return '#1F1F1F';
       default: return '#F1F1F1';
@@ -246,11 +254,11 @@ const { id } = Astro.params;
 
     container.innerHTML = `
       <!-- Project Header -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div class="bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-700">
         <div class="flex justify-between items-start mb-4">
           <div class="flex-1">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">${project.name}</h1>
-            <p class="text-gray-600">${project.description || 'No description provided'}</p>
+            <h1 class="text-3xl font-bold text-white mb-2">${project.name}</h1>
+            <p class="text-gray-300">${project.description || 'No description provided'}</p>
           </div>
           <div class="flex items-center gap-3">
             <button
@@ -269,125 +277,170 @@ const { id } = Astro.params;
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div class="bg-gray-50 rounded-lg p-4">
-            <p class="text-sm text-gray-600 mb-1">Project Number</p>
-            <p class="text-lg font-semibold text-gray-900">${project.projectNumber}</p>
+          <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+            <p class="text-sm text-gray-400 mb-1">Project Number</p>
+            <p class="text-lg font-semibold text-white">${project.projectNumber}</p>
           </div>
-          <div class="bg-gray-50 rounded-lg p-4">
-            <p class="text-sm text-gray-600 mb-1">Total Budget</p>
-            <p class="text-lg font-semibold text-gray-900">${formatCurrency(project.totalBudget || 0)}</p>
+          <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+            <p class="text-sm text-gray-400 mb-1">Total Budget</p>
+            <p class="text-lg font-semibold text-white">${formatCurrency(project.totalBudget || 0)}</p>
           </div>
-          <div class="bg-gray-50 rounded-lg p-4">
-            <p class="text-sm text-gray-600 mb-1">Start Date</p>
-            <p class="text-lg font-semibold text-gray-900">${formatDate(project.startDate)}</p>
+          <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+            <p class="text-sm text-gray-400 mb-1">Start Date</p>
+            <p class="text-lg font-semibold text-white">${formatDate(project.startDate)}</p>
           </div>
-          <div class="bg-gray-50 rounded-lg p-4">
-            <p class="text-sm text-gray-600 mb-1">Est. Completion</p>
-            <p class="text-lg font-semibold text-gray-900">${formatDate(project.estimatedCompletion)}</p>
+          <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+            <p class="text-sm text-gray-400 mb-1">Est. Completion</p>
+            <p class="text-lg font-semibold text-white">${formatDate(project.estimatedCompletion)}</p>
           </div>
         </div>
 
         <!-- Project Team Contacts Section -->
-        <div class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Project Team Contacts</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <button
-              onclick="openContactsModal('client')"
-              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
-              style="background-color: #2D3748;"
-            >
-              <span>👥</span>
-              <span>Client Team</span>
-            </button>
-            <button
-              onclick="openContactsModal('design')"
-              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
-              style="background-color: #4A5568;"
-            >
-              <span>📐</span>
-              <span>Design Team</span>
-            </button>
-            <button
-              onclick="openContactsModal('gc')"
-              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
-              style="background-color: #1A365D;"
-            >
-              <span>🏗️</span>
-              <span>GC Team</span>
-            </button>
-            <button
-              onclick="openContactsModal('subcontractors')"
-              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
-              style="background-color: #FF5E15;"
-            >
-              <span>🔧</span>
-              <span>Subcontractors</span>
-            </button>
+        <div class="mt-6 pt-6 border-t border-gray-700">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-white">Project Team Contacts</h3>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Client Team -->
+            <div class="space-y-2">
+              <button
+                onclick="openContactsModal('client')"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+                style="background-color: #2D3748;"
+              >
+                <span>👥</span>
+                <span>Client Team</span>
+              </button>
+              <button
+                onclick="openInviteModal('owner')"
+                class="w-full flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium text-white border-2 border-[#2D3748] hover:bg-[#2D3748] transition-all"
+              >
+                <span>➕</span>
+                <span>Invite</span>
+              </button>
+            </div>
+
+            <!-- Design Team -->
+            <div class="space-y-2">
+              <button
+                onclick="openContactsModal('design')"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+                style="background-color: #4A5568;"
+              >
+                <span>📐</span>
+                <span>Design Team</span>
+              </button>
+              <button
+                onclick="openInviteModal('architect')"
+                class="w-full flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium text-white border-2 border-[#4A5568] hover:bg-[#4A5568] transition-all"
+              >
+                <span>➕</span>
+                <span>Invite</span>
+              </button>
+            </div>
+
+            <!-- GC Team -->
+            <div class="space-y-2">
+              <button
+                onclick="openContactsModal('gc')"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+                style="background-color: #1A365D;"
+              >
+                <span>🏗️</span>
+                <span>GC Team</span>
+              </button>
+              <button
+                onclick="openInviteModal('general_contractor')"
+                class="w-full flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium text-white border-2 border-[#1A365D] hover:bg-[#1A365D] transition-all"
+              >
+                <span>➕</span>
+                <span>Invite</span>
+              </button>
+            </div>
+
+            <!-- Subcontractors -->
+            <div class="space-y-2">
+              <button
+                onclick="openContactsModal('subcontractors')"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white transition-all shadow-sm hover:opacity-90"
+                style="background-color: #FF6600;"
+              >
+                <span>🔧</span>
+                <span>Subcontractors</span>
+              </button>
+              <button
+                onclick="openInviteModal('subcontractor')"
+                class="w-full flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium text-white border-2 border-[#FF6600] hover:bg-[#FF6600] transition-all"
+              >
+                <span>➕</span>
+                <span>Invite</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Activity Status Panels -->
       <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">Recent Activity & Status Updates</h2>
+        <h2 class="text-2xl font-bold text-white mb-4">Recent Activity & Status Updates</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- RFI Status -->
-          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #4A5568;">
+          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #4A5568;">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900">📋 RFIs</h3>
+              <h3 class="text-lg font-semibold text-white">📋 RFIs</h3>
               <span class="text-2xl font-bold" style="color: #4A5568;">3</span>
             </div>
-            <p class="text-sm text-gray-600 mb-2">2 pending responses</p>
+            <p class="text-sm text-gray-400 mb-2">2 pending responses</p>
             <div class="text-xs text-gray-500">Last updated: 2 hours ago</div>
           </div>
 
           <!-- Submittal Status -->
-          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #2D3748;">
+          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #2D3748;">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900">📦 Submittals</h3>
+              <h3 class="text-lg font-semibold text-white">📦 Submittals</h3>
               <span class="text-2xl font-bold" style="color: #2D3748;">5</span>
             </div>
-            <p class="text-sm text-gray-600 mb-2">1 requires review</p>
+            <p class="text-sm text-gray-400 mb-2">1 requires review</p>
             <div class="text-xs text-gray-500">Last updated: 1 day ago</div>
           </div>
 
           <!-- Change Orders Status -->
-          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #FF5E15;">
+          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #FF6600;">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900">📝 Change Orders</h3>
-              <span class="text-2xl font-bold" style="color: #FF5E15;">2</span>
+              <h3 class="text-lg font-semibold text-white">📝 Change Orders</h3>
+              <span class="text-2xl font-bold" style="color: #FF6600;">2</span>
             </div>
-            <p class="text-sm text-gray-600 mb-2">All approved</p>
+            <p class="text-sm text-gray-400 mb-2">All approved</p>
             <div class="text-xs text-gray-500">Last updated: 3 days ago</div>
           </div>
 
           <!-- Schedule Status -->
-          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #3D9991;">
+          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #3D9991;">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900">📅 Schedule</h3>
+              <h3 class="text-lg font-semibold text-white">📅 Schedule</h3>
               <span class="text-2xl font-bold" style="color: #3D9991;">On Track</span>
             </div>
-            <p class="text-sm text-gray-600 mb-2">Next milestone in 5 days</p>
+            <p class="text-sm text-gray-400 mb-2">Next milestone in 5 days</p>
             <div class="text-xs text-gray-500">Last updated: Today</div>
           </div>
 
           <!-- Payment Apps Status -->
-          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #1A365D;">
+          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #1A365D;">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900">💰 Pay Apps</h3>
+              <h3 class="text-lg font-semibold text-white">💰 Pay Apps</h3>
               <span class="text-2xl font-bold" style="color: #1A365D;">1</span>
             </div>
-            <p class="text-sm text-gray-600 mb-2">In review</p>
+            <p class="text-sm text-gray-400 mb-2">In review</p>
             <div class="text-xs text-gray-500">Last updated: 4 hours ago</div>
           </div>
 
           <!-- Safety Status -->
-          <div class="bg-white rounded-lg shadow-md p-5 border-l-4" style="border-color: #FF5E15;">
+          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #FF5E15;">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900">🦺 Safety</h3>
+              <h3 class="text-lg font-semibold text-white">🦺 Safety</h3>
               <span class="text-2xl font-bold" style="color: #FF5E15;">0</span>
             </div>
-            <p class="text-sm text-gray-600 mb-2">No incidents reported</p>
+            <p class="text-sm text-gray-400 mb-2">No incidents reported</p>
             <div class="text-xs text-gray-500">Last updated: Today</div>
           </div>
         </div>
@@ -398,52 +451,52 @@ const { id } = Astro.params;
         <!-- Left Column (2/3) -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Location Details -->
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Location</h2>
+          <div class="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">Location</h2>
             <div class="space-y-2">
-              <p class="text-gray-700"><span class="font-medium">Address:</span> ${project.address || 'Not specified'}</p>
-              <p class="text-gray-700"><span class="font-medium">City:</span> ${project.city || 'Not specified'}</p>
-              <p class="text-gray-700"><span class="font-medium">State:</span> ${project.state || 'Not specified'}</p>
-              <p class="text-gray-700"><span class="font-medium">Zip Code:</span> ${project.zipCode || 'Not specified'}</p>
+              <p class="text-gray-300"><span class="font-medium">Address:</span> ${project.address || 'Not specified'}</p>
+              <p class="text-gray-300"><span class="font-medium">City:</span> ${project.city || 'Not specified'}</p>
+              <p class="text-gray-300"><span class="font-medium">State:</span> ${project.state || 'Not specified'}</p>
+              <p class="text-gray-300"><span class="font-medium">Zip Code:</span> ${project.zipCode || 'Not specified'}</p>
             </div>
           </div>
 
           <!-- Budget Breakdown -->
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Budget Overview</h2>
+          <div class="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">Budget Overview</h2>
             <div class="space-y-3">
-              <div class="flex justify-between items-center pb-2 border-b border-gray-200">
-                <span class="text-gray-600">Total Budget</span>
-                <span class="font-semibold text-gray-900">${formatCurrency(project.totalBudget || 0)}</span>
+              <div class="flex justify-between items-center pb-2 border-b border-gray-700">
+                <span class="text-gray-400">Total Budget</span>
+                <span class="font-semibold text-white">${formatCurrency(project.totalBudget || 0)}</span>
               </div>
-              <div class="flex justify-between items-center pb-2 border-b border-gray-200">
-                <span class="text-gray-600">Spent</span>
-                <span class="font-semibold text-red-600">${formatCurrency(project.spentBudget || 0)}</span>
+              <div class="flex justify-between items-center pb-2 border-b border-gray-700">
+                <span class="text-gray-400">Spent</span>
+                <span class="font-semibold text-red-400">${formatCurrency(project.spentBudget || 0)}</span>
               </div>
-              <div class="flex justify-between items-center pb-2 border-b border-gray-200">
-                <span class="text-gray-600">Committed</span>
-                <span class="font-semibold text-yellow-600">${formatCurrency(project.committedBudget || 0)}</span>
+              <div class="flex justify-between items-center pb-2 border-b border-gray-700">
+                <span class="text-gray-400">Committed</span>
+                <span class="font-semibold text-yellow-400">${formatCurrency(project.committedBudget || 0)}</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-gray-600">Remaining</span>
+                <span class="text-gray-400">Remaining</span>
                 <span class="font-semibold" style="color: #3D9991;">${formatCurrency(project.remainingBudget || project.totalBudget || 0)}</span>
               </div>
             </div>
           </div>
 
           <!-- Progress -->
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Project Progress</h2>
+          <div class="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">Project Progress</h2>
             <div class="mb-4">
               <div class="flex justify-between mb-2">
-                <span class="text-gray-600">Overall Progress</span>
-                <span class="font-semibold text-gray-900">${project.progressPercentage || 0}%</span>
+                <span class="text-gray-400">Overall Progress</span>
+                <span class="font-semibold text-white">${project.progressPercentage || 0}%</span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="w-full bg-gray-700 rounded-full h-3">
                 <div class="h-3 rounded-full" style="width: ${project.progressPercentage || 0}%; background-color: #3D9991;"></div>
               </div>
             </div>
-            <div class="flex justify-between text-sm text-gray-600 mt-4">
+            <div class="flex justify-between text-sm text-gray-400 mt-4">
               <span>Milestones: ${project.completedMilestones || 0} / ${project.totalMilestones || 0}</span>
             </div>
           </div>
@@ -452,23 +505,23 @@ const { id } = Astro.params;
         <!-- Right Column (1/3) -->
         <div class="space-y-6">
           <!-- Project Info -->
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Project Info</h2>
+          <div class="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4">Project Info</h2>
             <div class="space-y-3 text-sm">
               <div>
-                <p class="text-gray-600 mb-1">Created</p>
-                <p class="font-medium text-gray-900">${formatDate(project.createdAt)}</p>
+                <p class="text-gray-400 mb-1">Created</p>
+                <p class="font-medium text-white">${formatDate(project.createdAt)}</p>
               </div>
               <div>
-                <p class="text-gray-600 mb-1">Last Updated</p>
-                <p class="font-medium text-gray-900">${formatDate(project.updatedAt)}</p>
+                <p class="text-gray-400 mb-1">Last Updated</p>
+                <p class="font-medium text-white">${formatDate(project.updatedAt)}</p>
               </div>
               ${project.tags && project.tags.length > 0 ? `
                 <div>
-                  <p class="text-gray-600 mb-2">Tags</p>
+                  <p class="text-gray-400 mb-2">Tags</p>
                   <div class="flex flex-wrap gap-2">
                     ${project.tags.map((tag: string) => `
-                      <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                      <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-700 text-gray-300">
                         ${tag}
                       </span>
                     `).join('')}
@@ -484,12 +537,12 @@ const { id } = Astro.params;
 
   function renderError(message: string, container: HTMLElement) {
     container.innerHTML = `
-      <div class="bg-white rounded-lg shadow-md p-12 text-center">
+      <div class="bg-gray-800 rounded-lg shadow-md p-12 text-center border border-gray-700">
         <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
         </svg>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">${message}</h3>
-        <p class="text-gray-600 mb-6">The project you're looking for could not be found.</p>
+        <h3 class="text-lg font-medium text-white mb-2">${message}</h3>
+        <p class="text-gray-400 mb-6">The project you're looking for could not be found.</p>
         <a
           href="/projects"
           class="inline-flex items-center text-white px-6 py-2 rounded-lg font-medium transition-colors"
@@ -523,10 +576,10 @@ const { id } = Astro.params;
     modal.id = 'project-info-modal';
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
     modal.innerHTML = `
-      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h2 class="text-2xl font-bold text-gray-900">Edit Project Information</h2>
-          <button onclick="closeModal('project-info-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+        <div class="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-bold text-white">Edit Project Information</h2>
+          <button onclick="closeModal('project-info-modal')" class="text-gray-400 hover:text-white transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -536,24 +589,24 @@ const { id } = Astro.params;
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Project Name *</label>
-                <input type="text" id="edit-project-name" value="${currentProjectData.name || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter project name">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Project Name *</label>
+                <input type="text" id="edit-project-name" value="${currentProjectData.name || ''}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter project name">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Project Number *</label>
-                <input type="text" id="edit-project-number" value="${currentProjectData.projectNumber || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter project number">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Project Number *</label>
+                <input type="text" id="edit-project-number" value="${currentProjectData.projectNumber || ''}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter project number">
               </div>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea id="edit-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Enter description">${currentProjectData.description || ''}</textarea>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Description</label>
+              <textarea id="edit-description" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Enter description">${currentProjectData.description || ''}</textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select id="edit-status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Status</label>
+                <select id="edit-status" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500">
                   <option value="planning" ${currentProjectData.status === 'planning' ? 'selected' : ''}>Planning</option>
                   <option value="in_progress" ${currentProjectData.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
                   <option value="on_hold" ${currentProjectData.status === 'on_hold' ? 'selected' : ''}>On Hold</option>
@@ -562,47 +615,47 @@ const { id } = Astro.params;
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Total Budget</label>
-                <input type="number" id="edit-budget" value="${currentProjectData.totalBudget || 0}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="0">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Total Budget</label>
+                <input type="number" id="edit-budget" value="${currentProjectData.totalBudget || 0}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="0">
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input type="date" id="edit-start-date" value="${formatDateForInput(currentProjectData.startDate)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Start Date</label>
+                <input type="date" id="edit-start-date" value="${formatDateForInput(currentProjectData.startDate)}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Est. Completion</label>
-                <input type="date" id="edit-completion-date" value="${formatDateForInput(currentProjectData.estimatedCompletion)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                <input type="text" id="edit-address" value="${currentProjectData.address || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter address">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input type="text" id="edit-city" value="${currentProjectData.city || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter city">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Est. Completion</label>
+                <input type="date" id="edit-completion-date" value="${formatDateForInput(currentProjectData.estimatedCompletion)}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500">
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
-                <input type="text" id="edit-state" value="${currentProjectData.state || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter state">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Address</label>
+                <input type="text" id="edit-address" value="${currentProjectData.address || ''}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter address">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
-                <input type="text" id="edit-zip" value="${currentProjectData.zipCode || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter zip code">
+                <label class="block text-sm font-medium text-gray-300 mb-1">City</label>
+                <input type="text" id="edit-city" value="${currentProjectData.city || ''}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter city">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">State</label>
+                <input type="text" id="edit-state" value="${currentProjectData.state || ''}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter state">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Zip Code</label>
+                <input type="text" id="edit-zip" value="${currentProjectData.zipCode || ''}" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter zip code">
               </div>
             </div>
           </div>
         </div>
-        <div class="sticky bottom-0 bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
-          <button onclick="closeModal('project-info-modal')" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+        <div class="sticky bottom-0 bg-gray-900 px-6 py-4 flex justify-end gap-3 border-t border-gray-700">
+          <button onclick="closeModal('project-info-modal')" class="px-4 py-2 text-gray-300 bg-gray-800 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors">
             Cancel
           </button>
           <button onclick="saveProjectInfo()" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #4BAAD8;">
@@ -614,7 +667,7 @@ const { id } = Astro.params;
     document.body.appendChild(modal);
   }
 
-  function openContactsModal(team: string) {
+  async function openContactsModal(team: string) {
     const teamNames = {
       client: 'Client Team',
       design: 'Design Team',
@@ -622,14 +675,56 @@ const { id } = Astro.params;
       subcontractors: 'Subcontractors'
     };
 
+    // Map team to role filter
+    const roleMap = {
+      client: 'owner',
+      design: 'architect',
+      gc: 'general_contractor',
+      subcontractors: 'subcontractor'
+    };
+
+    // Fetch contacts from database for this project and role
+    let contacts = [];
+    try {
+      const response = await fetch(`/api/contacts?projectId=${projectId}&role=${roleMap[team]}`);
+      if (response.ok) {
+        const data = await response.json();
+        contacts = data.contacts || [];
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    }
+
     const modal = document.createElement('div');
     modal.id = 'contacts-modal';
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+
+    const contactsHtml = contacts.length > 0
+      ? contacts.map((contact: any) => `
+          <div class="bg-gray-700 p-4 rounded-lg">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-semibold text-white">${contact.firstName || ''} ${contact.lastName || ''}</h3>
+                <p class="text-sm text-gray-300">${contact.title || contact.role || ''}</p>
+                ${contact.company ? `<p class="text-sm text-gray-400">${contact.company}</p>` : ''}
+                ${contact.email ? `<p class="text-sm text-gray-300 mt-1">📧 ${contact.email}</p>` : ''}
+                ${contact.phone ? `<p class="text-sm text-gray-300">📱 ${contact.phone}</p>` : ''}
+              </div>
+              <a href="/projects/${projectId}/contacts" class="text-gray-400 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                </svg>
+              </a>
+            </div>
+          </div>
+        `).join('')
+      : '<div class="text-center py-8 text-gray-400">No contacts found for this team. <a href="/projects/' + projectId + '/contacts" class="text-blue-400 hover:underline">Add contacts</a></div>';
+
     modal.innerHTML = `
-      <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h2 class="text-2xl font-bold text-gray-900">${teamNames[team]} Contacts</h2>
-          <button onclick="closeModal('contacts-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+        <div class="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 class="text-2xl font-bold text-white">${teamNames[team]} Contacts</h2>
+          <button onclick="closeModal('contacts-modal')" class="text-gray-400 hover:text-white transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -637,42 +732,13 @@ const { id } = Astro.params;
         </div>
         <div class="p-6">
           <div class="flex justify-between items-center mb-4">
-            <p class="text-gray-600">Manage contacts for ${teamNames[team]}</p>
-            <button onclick="addContact('${team}')" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #FF5E15;">
+            <p class="text-gray-400">Manage contacts for ${teamNames[team]}</p>
+            <a href="/projects/${projectId}/contacts" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #FF6600;">
               + Add Contact
-            </button>
+            </a>
           </div>
           <div class="space-y-3">
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h3 class="font-semibold text-gray-900">John Doe</h3>
-                  <p class="text-sm text-gray-600">Project Manager</p>
-                  <p class="text-sm text-gray-600 mt-1">📧 john.doe@example.com</p>
-                  <p class="text-sm text-gray-600">📱 (555) 123-4567</p>
-                </div>
-                <button class="text-gray-400 hover:text-gray-600">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h3 class="font-semibold text-gray-900">Jane Smith</h3>
-                  <p class="text-sm text-gray-600">Superintendent</p>
-                  <p class="text-sm text-gray-600 mt-1">📧 jane.smith@example.com</p>
-                  <p class="text-sm text-gray-600">📱 (555) 987-6543</p>
-                </div>
-                <button class="text-gray-400 hover:text-gray-600">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
+            ${contactsHtml}
           </div>
         </div>
       </div>
@@ -744,10 +810,182 @@ const { id } = Astro.params;
     alert(`Add contact for ${team} team functionality will be implemented.`);
   }
 
+  // Invitation Modal
+  async function openInviteModal(role: string) {
+    if (!currentProjectData) {
+      alert('Project data not loaded yet. Please try again.');
+      return;
+    }
+
+    // Fetch CSI divisions
+    let csiDivisions = [];
+    try {
+      const response = await fetch('/api/csi-divisions');
+      if (response.ok) {
+        const data = await response.json();
+        csiDivisions = data.divisions || [];
+      }
+    } catch (error) {
+      console.error('Error fetching CSI divisions:', error);
+    }
+
+    const roleLabels: any = {
+      owner: 'Owner / Client',
+      architect: 'Architect',
+      engineer: 'Engineer',
+      general_contractor: 'General Contractor',
+      subcontractor: 'Subcontractor',
+      supplier: 'Supplier'
+    };
+
+    const shouldShowDivision = role === 'subcontractor' || role === 'supplier';
+
+    const modal = document.createElement('div');
+    modal.id = 'invitation-modal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+    modal.innerHTML = `
+      <div class="bg-gray-900 rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-gray-700">
+        <div class="sticky top-0 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-bold text-white">Invite Team Member</h2>
+            <p class="text-sm text-gray-400 mt-1">${currentProjectData.name}</p>
+          </div>
+          <button onclick="closeModal('invitation-modal')" class="text-gray-400 hover:text-white text-3xl leading-none">×</button>
+        </div>
+
+        <form id="invitation-form" class="p-6 space-y-5">
+          <div class="bg-red-500/10 border border-red-500 rounded-lg p-4 hidden" id="invite-error">
+            <p class="text-red-400 text-sm"></p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Email Address *</label>
+            <input type="email" name="email" required placeholder="contractor@example.com"
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6600] transition-colors">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Company Name *</label>
+            <input type="text" name="companyName" required placeholder="ABC Construction Co."
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6600] transition-colors">
+          </div>
+
+          <input type="hidden" name="teamRole" value="${role}">
+
+          ${shouldShowDivision ? `
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">CSI Division / Trade *</label>
+              <select name="csiDivision" required
+                class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FF6600] transition-colors">
+                <option value="">Select a division...</option>
+                <option value="02">02 - Existing Conditions</option>
+                <option value="03">03 - Concrete</option>
+                <option value="04">04 - Masonry</option>
+                <option value="05">05 - Metals</option>
+                <option value="06">06 - Wood, Plastics, and Composites</option>
+                <option value="07">07 - Thermal and Moisture Protection</option>
+                <option value="08">08 - Openings</option>
+                <option value="09">09 - Finishes</option>
+                <option value="21">21 - Fire Suppression</option>
+                <option value="22">22 - Plumbing</option>
+                <option value="23">23 - HVAC</option>
+                <option value="26">26 - Electrical</option>
+                <option value="27">27 - Communications</option>
+                <option value="28">28 - Electronic Safety and Security</option>
+                <option value="31">31 - Earthwork</option>
+                <option value="32">32 - Exterior Improvements</option>
+              </select>
+            </div>
+          ` : ''}
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Scope of Work</label>
+            <textarea name="scopeOfWork" rows="3" placeholder="Brief description of their responsibilities..."
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6600] transition-colors resize-none"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Personal Message (Optional)</label>
+            <textarea name="message" rows="3" placeholder="Add a personal message to your invitation..."
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6600] transition-colors resize-none"></textarea>
+          </div>
+
+          <div class="bg-blue-500/10 border border-blue-500/50 rounded-lg p-4">
+            <p class="text-blue-300 text-sm">
+              <strong>How it works:</strong> The invited person will receive an email with a link to join the project.
+            </p>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button type="button" onclick="closeModal('invitation-modal')"
+              class="flex-1 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors border border-gray-600">
+              Cancel
+            </button>
+            <button type="submit" id="invite-submit-btn"
+              class="flex-1 px-6 py-3 text-white rounded-lg font-semibold transition-all"
+              style="background-color: #FF6600;">
+              Send Invitation
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Handle form submission
+    const form = document.getElementById('invitation-form') as HTMLFormElement;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('invite-submit-btn') as HTMLButtonElement;
+      const errorDiv = document.getElementById('invite-error');
+
+      submitBtn.textContent = 'Sending...';
+      submitBtn.disabled = true;
+      errorDiv?.classList.add('hidden');
+
+      const formData = new FormData(form);
+      const data = {
+        email: formData.get('email'),
+        companyName: formData.get('companyName'),
+        teamRole: formData.get('teamRole'),
+        csiDivision: formData.get('csiDivision') || null,
+        scopeOfWork: formData.get('scopeOfWork') || null,
+        message: formData.get('message') || null
+      };
+
+      try {
+        const response = await fetch(`/api/projects/${projectId}/invitations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to send invitation');
+        }
+
+        alert(`Invitation sent successfully to ${data.email}!`);
+        closeModal('invitation-modal');
+      } catch (error: any) {
+        console.error('Error sending invitation:', error);
+        if (errorDiv) {
+          errorDiv.querySelector('p')!.textContent = error.message;
+          errorDiv.classList.remove('hidden');
+        }
+        submitBtn.textContent = 'Send Invitation';
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
   // Make functions available globally
   (window as any).openProjectInfoModal = openProjectInfoModal;
   (window as any).openContactsModal = openContactsModal;
   (window as any).closeModal = closeModal;
   (window as any).saveProjectInfo = saveProjectInfo;
   (window as any).addContact = addContact;
+  (window as any).openInviteModal = openInviteModal;
 </script>
