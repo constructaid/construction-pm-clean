@@ -27,7 +27,7 @@ pnpm-debug.log*
 *.md
 !README.md
 py knowledge base/
-data/
+/data/
 extracted-closeout-data/
 migrations/
 scripts/
