@@ -26,15 +26,17 @@ pnpm-debug.log*
 # Documentation and temp files
 *.md
 !README.md
-forms and templates/
 py knowledge base/
 data/
 extracted-closeout-data/
 migrations/
 scripts/
-public/uploads/
 public/constructaid-logo.pdf
 public/convert-logo.html
+
+# Keep uploads and forms folders for deployment
+!public/uploads/.gitkeep
+!forms and templates/**/*
 
 # Test and build files
 *.cjs
