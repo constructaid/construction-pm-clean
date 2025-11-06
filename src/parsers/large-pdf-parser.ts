@@ -12,14 +12,34 @@ import fs from 'fs';
 import path from 'path';
 import pdf from 'pdf-parse';
 import * as pdfjsLib from 'pdfjs-dist';
-import { createCanvas } from 'canvas';
 
-// Configure pdfjs-dist worker for Node.js environment
-const workerSrc = path.join(
-  path.dirname(require.resolve('pdfjs-dist/package.json')),
-  'build/pdf.worker.js'
-);
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+// Canvas is optional for server environments - only needed for thumbnail generation
+// We'll lazy-load it when needed
+let createCanvas: any = null;
+async function loadCanvas() {
+  if (createCanvas) return createCanvas;
+  try {
+    const canvasModule = await import('canvas');
+    createCanvas = canvasModule.createCanvas;
+    return createCanvas;
+  } catch (e) {
+    console.warn('Canvas module not available - thumbnail generation disabled');
+    return null;
+  }
+}
+
+// Configure pdfjs-dist worker for Node.js environment (skip on Vercel)
+try {
+  if (typeof require !== 'undefined') {
+    const workerSrc = path.join(
+      path.dirname(require.resolve('pdfjs-dist/package.json')),
+      'build/pdf.worker.js'
+    );
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+  }
+} catch (e) {
+  console.warn('PDF worker not configured - some features may be limited');
+}
 
 /**
  * Metadata for a single PDF page
