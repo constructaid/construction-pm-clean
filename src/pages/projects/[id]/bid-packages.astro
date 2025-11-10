@@ -375,7 +375,7 @@ const packages = await db
           ? parseInt(document.getElementById('mwbeGoalPercentage').value) || null
           : null,
         status: 'draft',
-        createdBy: 1,
+        createdBy: null, // TODO: Get from session when auth is implemented
       };
 
       const response = await fetch('/api/bidding/packages', {

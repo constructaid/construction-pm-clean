@@ -92,7 +92,7 @@ export const POST: APIRoute = async ({ request }) => {
         bidDueDate: new Date(bidDueDate),
         estimatedContractValue: estimatedContractValue || null,
         projectDuration: projectDuration || null,
-        createdBy: createdBy || 1,
+        createdBy: createdBy || null, // Set to null if no user session
       })
       .returning();
 
