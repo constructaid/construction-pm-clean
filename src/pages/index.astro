@@ -3,107 +3,441 @@ import Layout from '../layouts/Layout.astro';
 import { Hero } from '../components/Hero.tsx';
 ---
 
-<Layout title="ConstructAid - Modern Construction Management">
+<Layout title="ConstructAid - Complete Real Estate Development Platform">
   <Hero client:load />
 
-  <!-- Features Section -->
+  <!-- Value Proposition -->
+  <div class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+      <h2 class="text-4xl font-bold text-white mb-6">
+        The Complete Platform for Real Estate Development
+      </h2>
+      <p class="text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
+        From initial site selection through post-occupancy operations, ConstructAid powers the entire
+        real estate development lifecycle. Serve developers, architects, contractors, legal teams,
+        financiers, regulators, and end-users on one unified platform.
+      </p>
+    </div>
+  </div>
+
+  <!-- PHASE 1: PRE-DEVELOPMENT & FEASIBILITY -->
   <div class="bg-white py-20">
     <div class="max-w-7xl mx-auto px-6">
-      <div class="text-center mb-16">
-        <h2 class="text-3xl font-semibold text-text-primary">Powerful Features for Your Projects</h2>
-        <p class="mt-3 text-lg text-text-secondary">Everything you need to manage construction projects efficiently</p>
+      <div class="text-center mb-12">
+        <span class="inline-block px-4 py-2 bg-ca-orange/10 text-ca-orange rounded-full text-sm font-semibold mb-4">
+          PHASE 1
+        </span>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Pre-Development & Feasibility</h2>
+        <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+          Make smarter investment decisions with comprehensive site analysis, market research, and financial modeling
+        </p>
       </div>
 
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="bg-background-light rounded border border-gray-200 p-6 hover:border-ca-orange hover:shadow-ca-md transition-all">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0 rounded p-3 bg-ca-orange/10">
-              <svg class="h-8 w-8 text-ca-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-          </div>
-        </div>
-          <h3 class="text-lg font-semibold text-text-primary mb-2">Project Management</h3>
-          <p class="text-text-secondary text-sm">Track all your construction projects in one centralized dashboard with real-time updates</p>
-        </div>
-
-        <div class="bg-background-light rounded border border-gray-200 p-6 hover:border-status-success hover:shadow-ca-md transition-all">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0 rounded p-3 bg-status-success/10">
-              <svg class="h-8 w-8 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-          </div>
-          <h3 class="text-lg font-semibold text-text-primary mb-2">Budget Tracking</h3>
-          <p class="text-text-secondary text-sm">Monitor costs, track expenses, and stay within budget with detailed financial reporting</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-ca-orange transition-all">
+          <div class="text-3xl mb-4">🗺️</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Site Selection & Acquisition</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• GIS mapping & parcel data</li>
+            <li>• Zoning verification</li>
+            <li>• Environmental constraints</li>
+            <li>• Title search tracker</li>
+          </ul>
         </div>
 
-        <div class="bg-background-light rounded border border-gray-200 p-6 hover:border-status-info hover:shadow-ca-md transition-all">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0 rounded p-3 bg-status-info/10">
-              <svg class="h-8 w-8 text-status-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-              </svg>
-            </div>
-          </div>
-          <h3 class="text-lg font-semibold text-text-primary mb-2">Team Coordination</h3>
-          <p class="text-text-secondary text-sm">Manage teams, assign tasks, and coordinate efficiently across all stakeholders</p>
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-ca-orange transition-all">
+          <div class="text-3xl mb-4">📊</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Market Analysis</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Demographic data feeds</li>
+            <li>• Comparable sales analysis</li>
+            <li>• Absorption rate calculators</li>
+            <li>• Tenant profiling</li>
+          </ul>
         </div>
 
-        <div class="bg-background-light rounded border border-gray-200 p-6 hover:border-ca-orange hover:shadow-ca-md transition-all">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0 rounded p-3 bg-ca-orange/10">
-              <svg class="h-8 w-8 text-ca-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
-            </div>
-          </div>
-          <h3 class="text-lg font-semibold text-text-primary mb-2">Progress Reports</h3>
-          <p class="text-text-secondary text-sm">Generate comprehensive reports and analytics to track project milestones and KPIs</p>
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-ca-orange transition-all">
+          <div class="text-3xl mb-4">💰</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Financial Feasibility</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Dynamic pro forma builder</li>
+            <li>• ROI, IRR, NPV calculators</li>
+            <li>• Sensitivity analysis</li>
+            <li>• Funding source database</li>
+          </ul>
         </div>
 
-        <div class="bg-background-light rounded border border-gray-200 p-6 hover:border-status-warning hover:shadow-ca-md transition-all">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0 rounded p-3 bg-status-warning/10">
-              <svg class="h-8 w-8 text-status-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-              </svg>
-            </div>
-          </div>
-          <h3 class="text-lg font-semibold text-text-primary mb-2">Risk Management</h3>
-          <p class="text-text-secondary text-sm">Identify, assess, and mitigate risks before they impact your project timeline</p>
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-ca-orange transition-all">
+          <div class="text-3xl mb-4">📋</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Entitlements & Approvals</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Permitting timeline tracker</li>
+            <li>• Public hearing scheduler</li>
+            <li>• Variance applications</li>
+            <li>• Community engagement</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2: DESIGN & PLANNING -->
+  <div class="bg-gray-50 py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="inline-block px-4 py-2 bg-blue-600/10 text-blue-600 rounded-full text-sm font-semibold mb-4">
+          PHASE 2
+        </span>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Design & Planning</h2>
+        <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+          Transform vision into reality with BIM integration, code compliance, and intelligent cost estimation
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-blue-600 transition-all">
+          <div class="text-3xl mb-4">🏗️</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Architectural & Engineering Design</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• 3D/BIM model viewer & markup</li>
+            <li>• Design iteration versioning</li>
+            <li>• Code compliance checker</li>
+            <li>• LEED credit tracker</li>
+          </ul>
         </div>
 
-        <div class="bg-background-light rounded border border-gray-200 p-6 hover:border-status-info hover:shadow-ca-md transition-all">
-          <div class="flex items-center mb-4">
-            <div class="flex-shrink-0 rounded p-3 bg-status-info/10">
-              <svg class="h-8 w-8 text-status-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-            </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-blue-600 transition-all">
+          <div class="text-3xl mb-4">📐</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Building Codes & Standards</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Real-time code database</li>
+            <li>• Automated compliance flagging</li>
+            <li>• Historical code changes</li>
+            <li>• Plan review integration</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-blue-600 transition-all">
+          <div class="text-3xl mb-4">💵</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Cost Estimating</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• RS Means cost databases</li>
+            <li>• BIM quantity takeoff</li>
+            <li>• Value engineering</li>
+            <li>• Budget vs. actual tracking</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 3: LEGAL & CONTRACTING -->
+  <div class="bg-white py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="inline-block px-4 py-2 bg-purple-600/10 text-purple-600 rounded-full text-sm font-semibold mb-4">
+          PHASE 3
+        </span>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Legal & Contracting</h2>
+        <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+          Mitigate risk and streamline legal processes with intelligent contract management
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-purple-600 transition-all">
+          <div class="text-3xl mb-4">⚖️</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Legal & Contract Management</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Contract template library (AIA, custom)</li>
+            <li>• Risk allocation matrix</li>
+            <li>• Change order & claims tracker</li>
+            <li>• Lien waiver manager</li>
+            <li>• Dispute resolution workflow</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-purple-600 transition-all">
+          <div class="text-3xl mb-4">🛡️</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Insurance & Bonding</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Policy tracking (GL, builders risk)</li>
+            <li>• Certificate of insurance manager</li>
+            <li>• Bond status dashboard</li>
+            <li>• OCIP/CCIP administration</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4: PROCUREMENT & CONSTRUCTION -->
+  <div class="bg-gray-50 py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="inline-block px-4 py-2 bg-green-600/10 text-green-600 rounded-full text-sm font-semibold mb-4">
+          PHASE 4
+        </span>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Procurement & Construction</h2>
+        <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+          Execute flawlessly with real-time field management, scheduling, and quality control
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-green-600 transition-all">
+          <div class="text-3xl mb-4">📦</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Bidding & Procurement</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Bid package assembly</li>
+            <li>• Sub pre-qualification</li>
+            <li>• Bid tabulation</li>
+            <li>• MWBE compliance</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-green-600 transition-all">
+          <div class="text-3xl mb-4">📅</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Project Scheduling</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Critical path scheduling</li>
+            <li>• Look-ahead schedules</li>
+            <li>• Delay impact analysis</li>
+            <li>• Primavera/MS Project sync</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-green-600 transition-all">
+          <div class="text-3xl mb-4">📸</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Field Management</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Daily progress reports</li>
+            <li>• RFI & submittal log</li>
+            <li>• Safety incident reporting</li>
+            <li>• Drone documentation</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-green-600 transition-all">
+          <div class="text-3xl mb-4">✅</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Quality Control</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Inspection checklists</li>
+            <li>• Punch list generator</li>
+            <li>• Inspector coordination</li>
+            <li>• Material testing log</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 5: CLOSEOUT & COMMISSIONING -->
+  <div class="bg-white py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="inline-block px-4 py-2 bg-indigo-600/10 text-indigo-600 rounded-full text-sm font-semibold mb-4">
+          PHASE 5
+        </span>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Closeout & Commissioning</h2>
+        <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+          Complete projects on time with comprehensive closeout documentation and systems testing
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-indigo-600 transition-all">
+          <div class="text-3xl mb-4">📄</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Closeout & Handover</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• As-built drawing manager</li>
+            <li>• O&M manual assembly</li>
+            <li>• Warranty tracking</li>
+            <li>• Certificate of Occupancy tracker</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-indigo-600 transition-all">
+          <div class="text-3xl mb-4">🔧</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Commissioning & Testing</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Commissioning plan executor</li>
+            <li>• Functional performance testing</li>
+            <li>• Training session scheduler</li>
+            <li>• Systems verification</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 6: OPERATIONS & ASSET MANAGEMENT -->
+  <div class="bg-gray-50 py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="inline-block px-4 py-2 bg-teal-600/10 text-teal-600 rounded-full text-sm font-semibold mb-4">
+          PHASE 6
+        </span>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Operations & Asset Management</h2>
+        <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+          Maximize asset value with intelligent facility management and capital planning
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-teal-600 transition-all">
+          <div class="text-3xl mb-4">🏢</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Property & Facility Management</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Lease administration</li>
+            <li>• Preventive maintenance scheduling</li>
+            <li>• Tenant work order portal</li>
+            <li>• Energy performance tracking</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-xl hover:border-teal-600 transition-all">
+          <div class="text-3xl mb-4">💼</div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Capital Planning & Reserves</h3>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Reserve study integration</li>
+            <li>• CapEx budgeting</li>
+            <li>• Lifecycle cost analysis</li>
+            <li>• Long-term planning</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CROSS-CUTTING UTILITIES -->
+  <div class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="inline-block px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-semibold mb-4">
+          PLATFORM CAPABILITIES
+        </span>
+        <h2 class="text-3xl font-bold text-white mb-4">Intelligent Cross-Cutting Features</h2>
+        <p class="text-lg text-gray-300 max-w-3xl mx-auto">
+          Powerful utilities that work across every phase of development
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:bg-gray-750 hover:border-yellow-500/50 transition-all">
+          <div class="text-3xl mb-4">📁</div>
+          <h3 class="text-lg font-bold text-white mb-2">Document Management</h3>
+          <p class="text-sm text-gray-400">Cloud repository with version control, role-based access, and mobile upload</p>
+        </div>
+
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:bg-gray-750 hover:border-yellow-500/50 transition-all">
+          <div class="text-3xl mb-4">🤖</div>
+          <h3 class="text-lg font-bold text-white mb-2">AI-Powered Insights</h3>
+          <p class="text-sm text-gray-400">Risk prediction, code interpretation, contract analysis, and market trends</p>
+        </div>
+
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:bg-gray-750 hover:border-yellow-500/50 transition-all">
+          <div class="text-3xl mb-4">📊</div>
+          <h3 class="text-lg font-bold text-white mb-2">Compliance Dashboard</h3>
+          <p class="text-sm text-gray-400">Federal/state/local regulation tracking, ESG reporting, and audit trails</p>
+        </div>
+
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:bg-gray-750 hover:border-yellow-500/50 transition-all">
+          <div class="text-3xl mb-4">🔗</div>
+          <h3 class="text-lg font-bold text-white mb-2">Integrations Marketplace</h3>
+          <p class="text-sm text-gray-400">Connect with Procore, PlanGrid, Bluebeam, QuickBooks, Yardi, and more</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Section -->
+  <div class="bg-white py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Built for Scale</h2>
+        <p class="text-lg text-gray-600">Comprehensive platform serving every stakeholder</p>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div>
+          <div class="text-4xl font-bold text-ca-orange mb-2">22+</div>
+          <div class="text-gray-600 font-medium">Module Categories</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold text-blue-600 mb-2">6</div>
+          <div class="text-gray-600 font-medium">Development Phases</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold text-green-600 mb-2">100%</div>
+          <div class="text-gray-600 font-medium">Lifecycle Coverage</div>
+        </div>
+        <div>
+          <div class="text-4xl font-bold text-purple-600 mb-2">∞</div>
+          <div class="text-gray-600 font-medium">Growth Potential</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Future Vision -->
+  <div class="bg-gradient-to-br from-ca-orange to-ca-orange-dark py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-white mb-6">The Future of Real Estate Development</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12">
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-6">
+            <div class="text-3xl mb-3">🪙</div>
+            <h3 class="text-white font-bold mb-2">Tokenized Ownership</h3>
+            <p class="text-white/90 text-sm">Blockchain-enabled crowdfunding & fractional ownership</p>
           </div>
-          <h3 class="text-lg font-semibold text-text-primary mb-2">Document Management</h3>
-          <p class="text-text-secondary text-sm">Store and organize all project documents, contracts, and blueprints securely</p>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-6">
+            <div class="text-3xl mb-3">🥽</div>
+            <h3 class="text-white font-bold mb-2">AR/VR Marketing</h3>
+            <p class="text-white/90 text-sm">Immersive property walkthroughs before construction</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-6">
+            <div class="text-3xl mb-3">💬</div>
+            <h3 class="text-white font-bold mb-2">User Feedback Loop</h3>
+            <p class="text-white/90 text-sm">Post-occupancy insights to improve future projects</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-6">
+            <div class="text-3xl mb-3">🌊</div>
+            <h3 class="text-white font-bold mb-2">Resilience Modeling</h3>
+            <p class="text-white/90 text-sm">Climate risk assessment & disaster insurance tools</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- CTA Section -->
-  <div class="bg-gradient-to-br from-gray-800 to-gray-900 py-20">
+  <div class="bg-gray-900 py-20">
     <div class="max-w-4xl mx-auto px-6 text-center">
-      <h2 class="text-3xl font-semibold text-white mb-4">Ready to Get Started?</h2>
-      <p class="text-xl text-gray-300 mb-8">Start managing your construction projects more effectively today</p>
-      <a
-        href="/projects/new"
-        class="inline-flex items-center bg-ca-orange hover:bg-ca-orange-dark text-white px-8 py-3 rounded font-medium transition-all shadow-ca-md hover:shadow-ca-lg"
-      >
-        Create Your First Project
-        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </a>
+      <h2 class="text-4xl font-bold text-white mb-4">Ready to Transform Your Development Process?</h2>
+      <p class="text-xl text-gray-300 mb-8">
+        Join the platform that powers the entire real estate development lifecycle
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a
+          href="/projects/new"
+          class="inline-flex items-center justify-center bg-ca-orange hover:bg-ca-orange-dark text-white px-8 py-4 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl text-lg"
+        >
+          Start Your Project
+          <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+          </svg>
+        </a>
+        <a
+          href="/admin/users"
+          class="inline-flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-white px-8 py-4 rounded-lg font-semibold transition-all border-2 border-gray-700 hover:border-gray-600 text-lg"
+        >
+          Schedule Demo
+        </a>
+      </div>
+      <p class="mt-8 text-gray-400 text-sm">
+        Trusted by developers, contractors, and property managers worldwide
+      </p>
     </div>
   </div>
 </Layout>
