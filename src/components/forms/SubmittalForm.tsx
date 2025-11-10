@@ -3,6 +3,7 @@
  * Creates new product submittals for review
  */
 import { createSignal } from 'solid-js';
+import CSISearchableSelect from '../CSISearchableSelect';
 
 interface SubmittalFormProps {
   projectId: string;
@@ -22,36 +23,16 @@ export default function SubmittalForm(props: SubmittalFormProps) {
   const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [error, setError] = createSignal('');
 
+  const [csiTitle, setCsiTitle] = createSignal('');
+
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const CSI_DIVISIONS = [
-    { code: '01', name: 'General Requirements' },
-    { code: '02', name: 'Existing Conditions' },
-    { code: '03', name: 'Concrete' },
-    { code: '04', name: 'Masonry' },
-    { code: '05', name: 'Metals' },
-    { code: '06', name: 'Wood, Plastics, and Composites' },
-    { code: '07', name: 'Thermal and Moisture Protection' },
-    { code: '08', name: 'Openings' },
-    { code: '09', name: 'Finishes' },
-    { code: '10', name: 'Specialties' },
-    { code: '11', name: 'Equipment' },
-    { code: '12', name: 'Furnishings' },
-    { code: '13', name: 'Special Construction' },
-    { code: '14', name: 'Conveying Equipment' },
-    { code: '21', name: 'Fire Suppression' },
-    { code: '22', name: 'Plumbing' },
-    { code: '23', name: 'HVAC' },
-    { code: '25', name: 'Integrated Automation' },
-    { code: '26', name: 'Electrical' },
-    { code: '27', name: 'Communications' },
-    { code: '28', name: 'Electronic Safety and Security' },
-    { code: '31', name: 'Earthwork' },
-    { code: '32', name: 'Exterior Improvements' },
-    { code: '33', name: 'Utilities' },
-  ];
+  const handleCSIChange = (code: string, division: string, title: string) => {
+    updateField('csiDivision', code);
+    setCsiTitle(title);
+  };
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -124,19 +105,14 @@ export default function SubmittalForm(props: SubmittalFormProps) {
           <label class="block text-sm font-medium text-gray-700 mb-2">
             CSI Division *
           </label>
-          <select
-            required
+          <CSISearchableSelect
             value={formData().csiDivision}
-            onChange={(e) => updateField('csiDivision', e.currentTarget.value)}
-            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          >
-            <option value="">Select CSI Division...</option>
-            {CSI_DIVISIONS.map(div => (
-              <option value={div.code}>
-                Division {div.code} - {div.name}
-              </option>
-            ))}
-          </select>
+            onChange={handleCSIChange}
+            placeholder="Type CSI code or search by work type (e.g., 'concrete', 'electrical', '03 30 00')..."
+            required={true}
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+          />
+          <p class="mt-1 text-xs text-gray-500">Start typing to search CSI codes or descriptions</p>
         </div>
 
         {/* Spec Section */}

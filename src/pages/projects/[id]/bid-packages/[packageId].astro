@@ -6,6 +6,7 @@ import ProjectLayout from '../../../../layouts/ProjectLayout.astro';
 import { db } from '../../../../lib/db';
 import { projects, bidPackages, costEstimates, subcontractorQuotes, mwbeParticipation } from '../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { CSI_SECTIONS } from '../../../../lib/data/csi-sections';
 
 const { id, packageId } = Astro.params;
 const projectId = parseInt(id!);
@@ -538,7 +539,10 @@ const statusColor = statusColors[bidPackage.status] || 'bg-gray-700 text-gray-30
   </div>
 </ProjectLayout>
 
-<script define:vars={{ projectId, bidPackageId, availableEstimates, bidPackage, quotes, mwbeParticipants, totalEstimatedValue }}>
+<!-- CSI Autocomplete Script -->
+<script is:inline src="/js/csi-autocomplete.js"></script>
+
+<script define:vars={{ projectId, bidPackageId, availableEstimates, bidPackage, quotes, mwbeParticipants, totalEstimatedValue, CSI_SECTIONS }}>
   async function updateStatus() {
     const statuses = [
       { value: 'draft', label: 'Draft' },
@@ -775,13 +779,19 @@ const statusColor = statusColors[bidPackage.status] || 'bg-gray-700 text-gray-30
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">CSI Division *</label>
-              <input
-                type="text"
-                id="csiDivision"
-                required
-                placeholder="e.g., 22 (Plumbing)"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-600"
-              />
+              <div class="relative">
+                <input
+                  type="text"
+                  id="quote-csi-search"
+                  placeholder="Type CSI code or search by work type (e.g., 'plumbing', '22')..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-600"
+                />
+                <input type="hidden" id="quote-csi-code" required />
+                <input type="hidden" id="quote-csi-division" />
+                <div id="quote-csi-dropdown" class="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"></div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Start typing to search CSI codes or descriptions</p>
             </div>
           </div>
 
@@ -884,6 +894,20 @@ const statusColor = statusColors[bidPackage.status] || 'bg-gray-700 text-gray-30
 
     document.body.appendChild(modal);
 
+    // Initialize CSI autocomplete for quotes
+    let quoteCsiCode = '';
+    let quoteCsiDivision = '';
+    const quoteCSIAutocomplete = new CSIAutocomplete({
+      searchInputId: 'quote-csi-search',
+      dropdownId: 'quote-csi-dropdown',
+      onSelect: (code, division, title) => {
+        quoteCsiCode = code;
+        quoteCsiDivision = division;
+        document.getElementById('quote-csi-code').value = code;
+        document.getElementById('quote-csi-division').value = division;
+      }
+    });
+
     const form = document.getElementById('add-quote-form');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -894,7 +918,7 @@ const statusColor = statusColors[bidPackage.status] || 'bg-gray-700 text-gray-30
         subcontractorEmail: document.getElementById('subcontractorEmail').value || null,
         subcontractorPhone: document.getElementById('subcontractorPhone').value || null,
         quoteNumber: document.getElementById('quoteNumber').value || null,
-        csiDivision: document.getElementById('csiDivision').value,
+        csiDivision: quoteCsiCode || document.getElementById('quote-csi-code').value,
         scopeOfWork: document.getElementById('scopeOfWork').value,
         quotedAmount: Math.round(parseFloat(document.getElementById('quotedAmount').value) * 100),
         taxAmount: document.getElementById('taxAmount').value
@@ -1014,12 +1038,19 @@ const statusColor = statusColors[bidPackage.status] || 'bg-gray-700 text-gray-30
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">CSI Division</label>
-              <input
-                type="text"
-                id="csiDivision"
-                placeholder="e.g., 03 (Concrete)"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-600"
-              />
+              <div class="relative">
+                <input
+                  type="text"
+                  id="mwbe-csi-search"
+                  placeholder="Type CSI code or search by work type (e.g., 'concrete', '03')..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-600"
+                />
+                <input type="hidden" id="mwbe-csi-code" />
+                <input type="hidden" id="mwbe-csi-division" />
+                <div id="mwbe-csi-dropdown" class="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"></div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Start typing to search CSI codes</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">Contract Amount *</label>
@@ -1079,6 +1110,20 @@ const statusColor = statusColors[bidPackage.status] || 'bg-gray-700 text-gray-30
 
     document.body.appendChild(modal);
 
+    // Initialize CSI autocomplete for M/WBE
+    let mwbeCsiCode = '';
+    let mwbeCsiDivision = '';
+    const mwbeCSIAutocomplete = new CSIAutocomplete({
+      searchInputId: 'mwbe-csi-search',
+      dropdownId: 'mwbe-csi-dropdown',
+      onSelect: (code, division, title) => {
+        mwbeCsiCode = code;
+        mwbeCsiDivision = division;
+        document.getElementById('mwbe-csi-code').value = code;
+        document.getElementById('mwbe-csi-division').value = division;
+      }
+    });
+
     // Auto-calculate percentage when contract amount changes
     const contractAmountInput = document.getElementById('contractAmount');
     const percentageInput = document.getElementById('percentageOfTotal');
@@ -1105,7 +1150,7 @@ const statusColor = statusColors[bidPackage.status] || 'bg-gray-700 text-gray-30
         companyName: document.getElementById('companyName').value,
         certificationType: document.getElementById('certificationType').value || null,
         certificationNumber: document.getElementById('certificationNumber').value || null,
-        csiDivision: document.getElementById('csiDivision').value || null,
+        csiDivision: mwbeCsiCode || document.getElementById('mwbe-csi-code').value || null,
         scopeOfWork: document.getElementById('scopeOfWork').value,
         contractAmount: Math.round(contractAmount * 100),
         percentageOfTotal,
