@@ -1,4 +1,5 @@
 import { createSignal, createEffect, onMount } from 'solid-js';
+import { LanguageToggle } from './LanguageToggle';
 
 export function Navbar() {
   const [isUserTypeOpen, setIsUserTypeOpen] = createSignal(false);
@@ -165,6 +166,9 @@ export function Navbar() {
               </svg>
               <span class="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
             </button>
+
+            {/* Language Toggle */}
+            <LanguageToggle />
 
             {/* New Project Button */}
             <a
