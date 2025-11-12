@@ -7,14 +7,25 @@ import i18next, { getLanguage, type Language } from './config';
  * Then: t('common.save') or t('field.dailyReports')
  */
 export function useTranslation() {
-  const [_, setLang] = createSignal<Language>(getLanguage());
+  const [_, setLang] = createSignal<Language>('en');
 
   // Force re-render when language changes
   const handleLanguageChange = () => {
-    setLang(getLanguage());
+    if (i18next.isInitialized) {
+      setLang(getLanguage());
+    }
   };
 
   onMount(() => {
+    // Initialize language when i18next is ready
+    if (i18next.isInitialized) {
+      setLang(getLanguage());
+    } else {
+      i18next.on('initialized', () => {
+        setLang(getLanguage());
+      });
+    }
+
     window.addEventListener('languageChanged', handleLanguageChange);
     // Subscribe to i18next events
     i18next.on('languageChanged', handleLanguageChange);
@@ -29,7 +40,8 @@ export function useTranslation() {
   return (key: string, options?: any) => {
     // Access the signal to create reactivity
     _();
-    return i18next.t(key, options);
+    // Return the translation if i18next is ready, otherwise return the key
+    return i18next.isInitialized ? i18next.t(key, options) : key;
   };
 }
 

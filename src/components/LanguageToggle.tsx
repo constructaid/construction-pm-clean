@@ -2,7 +2,8 @@ import { createSignal, onMount, onCleanup } from 'solid-js';
 import i18next, { setLanguage, getLanguage, type Language } from '../i18n/config';
 
 export function LanguageToggle() {
-  const [currentLang, setCurrentLang] = createSignal<Language>(getLanguage());
+  // Initialize i18next on component mount
+  const [currentLang, setCurrentLang] = createSignal<Language>('en');
 
   // Listen for language changes
   const handleLanguageChange = (event: CustomEvent<Language>) => {
@@ -10,9 +11,16 @@ export function LanguageToggle() {
   };
 
   onMount(() => {
+    // Wait for i18next to be ready, then set initial language
+    if (i18next.isInitialized) {
+      setCurrentLang(getLanguage());
+    } else {
+      i18next.on('initialized', () => {
+        setCurrentLang(getLanguage());
+      });
+    }
+
     window.addEventListener('languageChanged', handleLanguageChange as EventListener);
-    // Set initial language from i18next
-    setCurrentLang(getLanguage());
   });
 
   onCleanup(() => {
