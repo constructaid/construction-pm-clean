@@ -20,11 +20,15 @@ export function LanguageToggle() {
       });
     }
 
-    window.addEventListener('languageChanged', handleLanguageChange as EventListener);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('languageChanged', handleLanguageChange as EventListener);
+    }
   });
 
   onCleanup(() => {
-    window.removeEventListener('languageChanged', handleLanguageChange as EventListener);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('languageChanged', handleLanguageChange as EventListener);
+    }
   });
 
   const toggleLanguage = () => {

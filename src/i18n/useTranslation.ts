@@ -26,13 +26,17 @@ export function useTranslation() {
       });
     }
 
-    window.addEventListener('languageChanged', handleLanguageChange);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('languageChanged', handleLanguageChange);
+    }
     // Subscribe to i18next events
     i18next.on('languageChanged', handleLanguageChange);
   });
 
   onCleanup(() => {
-    window.removeEventListener('languageChanged', handleLanguageChange);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('languageChanged', handleLanguageChange);
+    }
     i18next.off('languageChanged', handleLanguageChange);
   });
 
@@ -56,12 +60,16 @@ export function useLanguage() {
   };
 
   onMount(() => {
-    window.addEventListener('languageChanged', handleLanguageChange);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('languageChanged', handleLanguageChange);
+    }
     i18next.on('languageChanged', handleLanguageChange);
   });
 
   onCleanup(() => {
-    window.removeEventListener('languageChanged', handleLanguageChange);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('languageChanged', handleLanguageChange);
+    }
     i18next.off('languageChanged', handleLanguageChange);
   });
 
