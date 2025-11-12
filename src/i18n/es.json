@@ -279,5 +279,16 @@
     "documents": "Documentos",
     "schedule": "Cronograma",
     "files": "Archivos"
+  },
+  "home": {
+    "modernConstruction": "Construcción Moderna",
+    "projectManagement": "Gestión de Proyectos",
+    "conceptToCompletion": "Concepto a Finalización",
+    "tagline": "Optimice sus proyectos de construcción con herramientas poderosas para seguimiento, presupuesto y colaboración en equipo—todo en una plataforma unificada.",
+    "viewProjects": "Ver Proyectos",
+    "newProject": "Nuevo Proyecto",
+    "activeProjects": "Proyectos Activos",
+    "budgetManaged": "Presupuesto Administrado",
+    "onTimeDelivery": "Entrega a Tiempo"
   }
 }

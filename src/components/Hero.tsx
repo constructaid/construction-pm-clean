@@ -1,4 +1,7 @@
+import { useTranslation } from '../i18n/useTranslation';
+
 export function Hero() {
+  const t = useTranslation();
   return (
     <div class="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
       {/* Subtle Grid Pattern */}
@@ -22,19 +25,18 @@ export function Hero() {
         <div class="text-center">
           {/* Main Heading */}
           <h1 class="text-4xl font-heading font-light text-white sm:text-5xl lg:text-6xl tracking-tight">
-            <span class="block">Modern Construction</span>
-            <span class="block mt-2 text-ca-orange">Project Management</span>
+            <span class="block">{t('home.modernConstruction')}</span>
+            <span class="block mt-2 text-ca-orange">{t('home.projectManagement')}</span>
           </h1>
 
           {/* Tagline */}
           <p class="mt-4 text-2xl font-heading font-bold tracking-wide uppercase" style="color: #FF6600;">
-            Concept to Completion
+            {t('home.conceptToCompletion')}
           </p>
 
           {/* Subheading */}
           <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-300 leading-relaxed">
-            Streamline your construction projects with powerful tools for tracking,
-            budgeting, and team collaboration—all in one unified platform.
+            {t('home.tagline')}
           </p>
 
           {/* CTA Buttons */}
@@ -43,7 +45,7 @@ export function Hero() {
               href="/projects"
               class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 text-base font-medium rounded bg-ca-orange hover:bg-ca-orange-dark text-white shadow-ca-md hover:shadow-ca-lg transition-all"
             >
-              View Projects
+              {t('home.viewProjects')}
               <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
@@ -52,7 +54,7 @@ export function Hero() {
               href="/projects/new"
               class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 text-base font-medium rounded border-2 border-white/30 text-white hover:bg-white/10 transition-all"
             >
-              + New Project
+              + {t('home.newProject')}
             </a>
           </div>
 
@@ -60,15 +62,15 @@ export function Hero() {
           <div class="mt-20 grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
             <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 shadow-procore hover:bg-white/15 transition-all">
               <div class="text-4xl font-bold text-white">50+</div>
-              <div class="text-sm mt-2 text-gray-300 font-medium">Active Projects</div>
+              <div class="text-sm mt-2 text-gray-300 font-medium">{t('home.activeProjects')}</div>
             </div>
             <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 shadow-procore hover:bg-white/15 transition-all">
               <div class="text-4xl font-bold text-white">$250M+</div>
-              <div class="text-sm mt-2 text-gray-300 font-medium">Budget Managed</div>
+              <div class="text-sm mt-2 text-gray-300 font-medium">{t('home.budgetManaged')}</div>
             </div>
             <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 shadow-procore hover:bg-white/15 transition-all">
               <div class="text-4xl font-bold text-white">98%</div>
-              <div class="text-sm mt-2 text-gray-300 font-medium">On-Time Delivery</div>
+              <div class="text-sm mt-2 text-gray-300 font-medium">{t('home.onTimeDelivery')}</div>
             </div>
           </div>
         </div>

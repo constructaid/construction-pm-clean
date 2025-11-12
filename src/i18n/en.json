@@ -279,5 +279,16 @@
     "documents": "Documents",
     "schedule": "Schedule",
     "files": "Files"
+  },
+  "home": {
+    "modernConstruction": "Modern Construction",
+    "projectManagement": "Project Management",
+    "conceptToCompletion": "Concept to Completion",
+    "tagline": "Streamline your construction projects with powerful tools for tracking, budgeting, and team collaboration—all in one unified platform.",
+    "viewProjects": "View Projects",
+    "newProject": "New Project",
+    "activeProjects": "Active Projects",
+    "budgetManaged": "Budget Managed",
+    "onTimeDelivery": "On-Time Delivery"
   }
 }
