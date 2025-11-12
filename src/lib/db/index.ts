@@ -6,7 +6,10 @@ import postgres from 'postgres';
 import * as schema from './schema';
 
 // Get database URL from environment
-const DATABASE_URL = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
+// Handle both Astro (import.meta.env) and Node (process.env) contexts
+const DATABASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.DATABASE_URL) ||
+  process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set');

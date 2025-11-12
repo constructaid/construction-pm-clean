@@ -11,6 +11,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "migrate": "tsx scripts/run-migrations.ts",
+    "seed": "tsx src/lib/db/seed.ts",
     "backup": "powershell -ExecutionPolicy Bypass -File scripts/backup-database.ps1",
     "restore": "powershell -ExecutionPolicy Bypass -File scripts/restore-database.ps1",
     "test": "vitest",
