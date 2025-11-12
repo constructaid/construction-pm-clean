@@ -3,6 +3,7 @@
  * Creates new RFIs for the project
  */
 import { createSignal } from 'solid-js';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface RFIFormProps {
   projectId: number;
@@ -13,6 +14,7 @@ interface RFIFormProps {
 }
 
 export default function RFIForm(props: RFIFormProps) {
+  const t = useTranslation();
   const [formData, setFormData] = createSignal({
     subject: '',
     description: '',
@@ -84,7 +86,7 @@ export default function RFIForm(props: RFIFormProps) {
   return (
     <form onSubmit={handleSubmit} class="space-y-6">
       <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h3 class="text-xl font-bold text-white mb-6">Create Request for Information (RFI)</h3>
+        <h3 class="text-xl font-bold text-white mb-6">{t('rfis.newRfi')}</h3>
 
         {error() && (
           <div class="mb-4 p-4 bg-red-900 border border-red-700 rounded-md">
@@ -95,7 +97,7 @@ export default function RFIForm(props: RFIFormProps) {
         {/* Subject */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-300 mb-2">
-            Subject *
+            {t('rfis.rfiTitle')} *
           </label>
           <input
             type="text"
@@ -110,16 +112,16 @@ export default function RFIForm(props: RFIFormProps) {
         {/* Priority */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-300 mb-2">
-            Priority
+            {t('rfis.priority')}
           </label>
           <select
             value={formData().priority}
             onChange={(e) => updateField('priority', e.currentTarget.value)}
             class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option value="low">{t('tasks.low')}</option>
+            <option value="medium">{t('tasks.medium')}</option>
+            <option value="high">{t('tasks.high')}</option>
             <option value="urgent">Urgent</option>
           </select>
         </div>
@@ -127,7 +129,7 @@ export default function RFIForm(props: RFIFormProps) {
         {/* Description */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-300 mb-2">
-            Description
+            {t('rfis.description')}
           </label>
           <textarea
             value={formData().description}
@@ -141,7 +143,7 @@ export default function RFIForm(props: RFIFormProps) {
         {/* Question */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-300 mb-2">
-            Question *
+            {t('rfis.question')} *
           </label>
           <textarea
             required
@@ -156,7 +158,7 @@ export default function RFIForm(props: RFIFormProps) {
         {/* Due Date */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-300 mb-2">
-            Due Date
+            {t('rfis.dueDate')}
           </label>
           <input
             type="date"
@@ -173,7 +175,7 @@ export default function RFIForm(props: RFIFormProps) {
             onClick={() => props.onCancel?.()}
             class="px-6 py-2 border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -184,7 +186,7 @@ export default function RFIForm(props: RFIFormProps) {
               cursor: isSubmitting() ? 'not-allowed' : 'pointer'
             }}
           >
-            {isSubmitting() ? 'Creating...' : 'Create RFI'}
+            {isSubmitting() ? t('common.loading') : t('rfis.submitRfi')}
           </button>
         </div>
       </div>

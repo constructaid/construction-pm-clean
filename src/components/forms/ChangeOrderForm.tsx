@@ -3,6 +3,7 @@
  * Creates new Change Orders for the project
  */
 import { createSignal } from 'solid-js';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface ChangeOrderFormProps {
   projectId: string;
@@ -11,6 +12,7 @@ interface ChangeOrderFormProps {
 }
 
 export default function ChangeOrderForm(props: ChangeOrderFormProps) {
+  const t = useTranslation();
   const [formData, setFormData] = createSignal({
     title: '',
     description: '',
@@ -113,7 +115,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
   return (
     <form onSubmit={handleSubmit} class="space-y-6">
       <div class="bg-white rounded-lg p-6">
-        <h3 class="text-xl font-bold text-gray-900 mb-6">Create Change Order</h3>
+        <h3 class="text-xl font-bold text-gray-900 mb-6">{t('changeOrders.newChangeOrder')}</h3>
 
         {error() && (
           <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -124,7 +126,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
         {/* Title */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Title *
+            {t('changeOrders.changeOrderTitle')} *
           </label>
           <input
             type="text"
@@ -139,7 +141,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
         {/* Description */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Description *
+            {t('changeOrders.description')} *
           </label>
           <textarea
             required
@@ -154,7 +156,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
         {/* Reason */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Reason for Change *
+            {t('changeOrders.reason')} *
           </label>
           <textarea
             required
@@ -243,7 +245,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Cost Impact ($)
+              {t('changeOrders.costImpact')} ($)
             </label>
             <input
               type="number"
@@ -258,7 +260,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Schedule Impact (Days)
+              {t('changeOrders.timeImpact')} (Days)
             </label>
             <input
               type="number"
@@ -323,7 +325,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
             onClick={() => props.onCancel?.()}
             class="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -334,7 +336,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
               cursor: isSubmitting() ? 'not-allowed' : 'pointer'
             }}
           >
-            {isSubmitting() ? 'Creating...' : 'Create Change Order'}
+            {isSubmitting() ? t('common.loading') : t('changeOrders.submitChangeOrder')}
           </button>
         </div>
       </div>
