@@ -3,6 +3,7 @@
  * Creates new product submittals for review
  */
 import { createSignal } from 'solid-js';
+import { useTranslation } from '../../i18n/useTranslation';
 import CSISearchableSelect from '../CSISearchableSelect';
 
 interface SubmittalFormProps {
@@ -12,6 +13,7 @@ interface SubmittalFormProps {
 }
 
 export default function SubmittalForm(props: SubmittalFormProps) {
+  const t = useTranslation();
   const [formData, setFormData] = createSignal({
     csiDivision: '',
     specSection: '',
@@ -92,7 +94,7 @@ export default function SubmittalForm(props: SubmittalFormProps) {
   return (
     <form onSubmit={handleSubmit} class="space-y-6">
       <div class="bg-white rounded-lg p-6">
-        <h3 class="text-xl font-bold text-gray-900 mb-6">Create Product Submittal</h3>
+        <h3 class="text-xl font-bold text-gray-900 mb-6">{t('submittals.newSubmittal')}</h3>
 
         {error() && (
           <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -118,7 +120,7 @@ export default function SubmittalForm(props: SubmittalFormProps) {
         {/* Spec Section */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Specification Section
+            {t('submittals.specSection')}
           </label>
           <input
             type="text"
@@ -133,7 +135,7 @@ export default function SubmittalForm(props: SubmittalFormProps) {
         {/* Title */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Submittal Title *
+            {t('submittals.submittalTitle')} *
           </label>
           <input
             type="text"
@@ -148,7 +150,7 @@ export default function SubmittalForm(props: SubmittalFormProps) {
         {/* Description */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Description
+            {t('submittals.description')}
           </label>
           <textarea
             value={formData().description}
@@ -162,7 +164,7 @@ export default function SubmittalForm(props: SubmittalFormProps) {
         {/* Due Date */}
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Review Due Date
+            {t('submittals.dueDate')}
           </label>
           <input
             type="date"
@@ -193,7 +195,7 @@ export default function SubmittalForm(props: SubmittalFormProps) {
             onClick={() => props.onCancel?.()}
             class="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -204,7 +206,7 @@ export default function SubmittalForm(props: SubmittalFormProps) {
               cursor: isSubmitting() ? 'not-allowed' : 'pointer'
             }}
           >
-            {isSubmitting() ? 'Creating...' : 'Create Submittal'}
+            {isSubmitting() ? t('submittals.submitting') : t('submittals.newSubmittal')}
           </button>
         </div>
       </div>
