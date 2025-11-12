@@ -28,6 +28,10 @@ const metaDescription = getMetaDescription(description);
     <title>{pageTitle}</title>
   </head>
   <body class="h-full bg-gray-950 font-sans antialiased">
+    <script>
+      // Initialize i18n before components load
+      import('../i18n/config.ts');
+    </script>
     <Navbar client:load />
     <ChatWidget client:load />
     <slot />
