@@ -19,7 +19,7 @@ export function Navbar() {
           // Check if user is internal (for demo, assume General Contractor is internal)
           const isInternal = selectedUserType() !== 'Owner' &&
                            selectedUserType() !== 'Design Team' &&
-                           selectedUserType() !== 'Guest User';
+                           selectedUserType() !== 'Client';
 
           setShowHR(isInternal);
           setHrStatus(hrModule.isTrialing ? 'trial' : 'active');
@@ -34,8 +34,8 @@ export function Navbar() {
     { name: 'Owner', icon: '🏢', path: '/dashboard/owner' },
     { name: 'Design Team', icon: '✏️', path: '/dashboard/design-team' },
     { name: 'General Contractor', icon: '👷', path: '/dashboard/general-contractor' },
-    { name: 'Sub Contractor', icon: '🔧', path: '/dashboard/sub-contractor' },
-    { name: 'Guest User', icon: '👤', path: '/dashboard/guest' },
+    { name: 'Sub Contractor', icon: '🔧', path: '/dashboard/general-contractor' },
+    { name: 'Client', icon: '👤', path: '/dashboard/client' },
   ];
 
   const handleUserTypeChange = (userType: { name: string; path: string }) => {
@@ -45,7 +45,7 @@ export function Navbar() {
     // Update HR visibility based on user type
     const isInternal = userType.name !== 'Owner' &&
                      userType.name !== 'Design Team' &&
-                     userType.name !== 'Guest User';
+                     userType.name !== 'Client';
     setShowHR(isInternal && hrStatus() !== null);
 
     window.location.href = userType.path;
