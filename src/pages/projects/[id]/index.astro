@@ -201,18 +201,24 @@ const { id } = Astro.params;
   initProjectDropdown();
 
   if (projectId && dashboardElement) {
-    fetch(`/api/projects/${projectId}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success && data.data?.project) {
-          // Store project data globally
-          currentProjectData = data.data.project;
+    // Fetch both project data and KPIs in parallel
+    Promise.all([
+      fetch(`/api/projects/${projectId}`).then(r => r.json()),
+      fetch(`/api/projects/${projectId}/kpis`).then(r => r.json())
+    ])
+      .then(([projectData, kpisData]) => {
+        const project = projectData.project || projectData.data?.project || projectData;
+        const kpis = kpisData.data?.kpis || kpisData.kpis || {};
 
-          renderProjectDashboard(data.data.project, dashboardElement);
+        if (project) {
+          // Store project data globally
+          currentProjectData = project;
+
+          renderProjectDashboard(project, kpis, dashboardElement);
           // Update dropdown button with current project name
           const projectNameEl = document.getElementById('current-project-name');
           if (projectNameEl) {
-            projectNameEl.textContent = data.data.project.name;
+            projectNameEl.textContent = project.name;
           }
         } else {
           renderError('Project not found', dashboardElement);
@@ -247,7 +253,24 @@ const { id } = Astro.params;
     }
   }
 
-  function renderProjectDashboard(project: any, container: HTMLElement) {
+  function formatTimeAgo(dateString: string | null) {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return formatDate(dateString);
+  }
+
+  function renderProjectDashboard(project: any, kpis: any, container: HTMLElement) {
     const statusColor = getStatusColor(project.status);
     const isLightBg = project.status === 'on_hold';
     const textColor = isLightBg ? '#1F1F1F' : '#FFFFFF';
@@ -385,64 +408,64 @@ const { id } = Astro.params;
         <h2 class="text-2xl font-bold text-white mb-4">Recent Activity & Status Updates</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- RFI Status -->
-          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #4A5568;">
+          <a href="/projects/${project.id}/rfis" class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700 hover:bg-gray-750 transition-colors" style="border-left-color: #4A5568;">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-semibold text-white">📋 RFIs</h3>
-              <span class="text-2xl font-bold" style="color: #4A5568;">3</span>
+              <span class="text-2xl font-bold" style="color: #4A5568;">${kpis.rfis?.total || 0}</span>
             </div>
-            <p class="text-sm text-gray-400 mb-2">2 pending responses</p>
-            <div class="text-xs text-gray-500">Last updated: 2 hours ago</div>
-          </div>
+            <p class="text-sm text-gray-400 mb-2">${kpis.rfis?.pending || 0} pending response${kpis.rfis?.pending !== 1 ? 's' : ''}</p>
+            <div class="text-xs text-gray-500">Last updated: ${formatTimeAgo(kpis.rfis?.lastUpdate)}</div>
+          </a>
 
           <!-- Submittal Status -->
-          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #2D3748;">
+          <a href="/projects/${project.id}/submittals" class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700 hover:bg-gray-750 transition-colors" style="border-left-color: #2D3748;">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-semibold text-white">📦 Submittals</h3>
-              <span class="text-2xl font-bold" style="color: #2D3748;">5</span>
+              <span class="text-2xl font-bold" style="color: #2D3748;">${kpis.submittals?.total || 0}</span>
             </div>
-            <p class="text-sm text-gray-400 mb-2">1 requires review</p>
-            <div class="text-xs text-gray-500">Last updated: 1 day ago</div>
-          </div>
+            <p class="text-sm text-gray-400 mb-2">${kpis.submittals?.pendingReview || 0} require${kpis.submittals?.pendingReview !== 1 ? '' : 's'} review</p>
+            <div class="text-xs text-gray-500">Last updated: ${formatTimeAgo(kpis.submittals?.lastUpdate)}</div>
+          </a>
 
           <!-- Change Orders Status -->
-          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #FF6600;">
+          <a href="/projects/${project.id}/change-orders" class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700 hover:bg-gray-750 transition-colors" style="border-left-color: #FF6600;">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-semibold text-white">📝 Change Orders</h3>
-              <span class="text-2xl font-bold" style="color: #FF6600;">2</span>
+              <span class="text-2xl font-bold" style="color: #FF6600;">${kpis.changeOrders?.total || 0}</span>
             </div>
-            <p class="text-sm text-gray-400 mb-2">All approved</p>
-            <div class="text-xs text-gray-500">Last updated: 3 days ago</div>
-          </div>
+            <p class="text-sm text-gray-400 mb-2">${kpis.changeOrders?.approved || 0} approved, ${kpis.changeOrders?.pending || 0} pending</p>
+            <div class="text-xs text-gray-500">Impact: ${formatCurrency(kpis.changeOrders?.totalCost || 0)}</div>
+          </a>
 
           <!-- Schedule Status -->
-          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #3D9991;">
+          <a href="/projects/${project.id}/schedule" class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700 hover:bg-gray-750 transition-colors" style="border-left-color: #3D9991;">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-semibold text-white">📅 Schedule</h3>
-              <span class="text-2xl font-bold" style="color: #3D9991;">On Track</span>
+              <span class="text-2xl font-bold" style="color: #3D9991;">${kpis.schedule?.status || 'Unknown'}</span>
             </div>
-            <p class="text-sm text-gray-400 mb-2">Next milestone in 5 days</p>
-            <div class="text-xs text-gray-500">Last updated: Today</div>
-          </div>
+            <p class="text-sm text-gray-400 mb-2">${kpis.schedule?.nextMilestone ? `Next milestone in ${kpis.schedule.daysUntilMilestone} days` : 'No upcoming milestones'}</p>
+            <div class="text-xs text-gray-500">View full schedule</div>
+          </a>
 
           <!-- Payment Apps Status -->
-          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #1A365D;">
+          <a href="/projects/${project.id}/payment-applications" class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700 hover:bg-gray-750 transition-colors" style="border-left-color: #1A365D;">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-semibold text-white">💰 Pay Apps</h3>
-              <span class="text-2xl font-bold" style="color: #1A365D;">1</span>
+              <span class="text-2xl font-bold" style="color: #1A365D;">${kpis.paymentApplications?.total || 0}</span>
             </div>
-            <p class="text-sm text-gray-400 mb-2">In review</p>
-            <div class="text-xs text-gray-500">Last updated: 4 hours ago</div>
-          </div>
+            <p class="text-sm text-gray-400 mb-2">${kpis.paymentApplications?.inReview || 0} in review</p>
+            <div class="text-xs text-gray-500">Last updated: ${formatTimeAgo(kpis.paymentApplications?.lastUpdate)}</div>
+          </a>
 
           <!-- Safety Status -->
-          <div class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700" style="border-left-color: #FF5E15;">
+          <a href="/projects/${project.id}/safety" class="bg-gray-800 rounded-lg shadow-md p-5 border-l-4 border border-gray-700 hover:bg-gray-750 transition-colors" style="border-left-color: #FF5E15;">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-lg font-semibold text-white">🦺 Safety</h3>
-              <span class="text-2xl font-bold" style="color: #FF5E15;">0</span>
+              <span class="text-2xl font-bold" style="color: #FF5E15;">${kpis.safety?.incidents || 0}</span>
             </div>
-            <p class="text-sm text-gray-400 mb-2">No incidents reported</p>
-            <div class="text-xs text-gray-500">Last updated: Today</div>
-          </div>
+            <p class="text-sm text-gray-400 mb-2">${kpis.safety?.incidents === 0 ? 'No incidents reported' : `${kpis.safety.incidents} incident${kpis.safety.incidents !== 1 ? 's' : ''} reported`}</p>
+            <div class="text-xs text-gray-500">Last updated: ${formatTimeAgo(kpis.safety?.lastUpdate)}</div>
+          </a>
         </div>
       </div>
 
