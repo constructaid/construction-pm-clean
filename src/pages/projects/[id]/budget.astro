@@ -1,0 +1,292 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import ProjectModuleNav from '../../../components/ProjectModuleNav.tsx';
+import ProjectHeader from '../../../components/ProjectHeader.tsx';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+---
+
+<Layout title="Budget - ConstructAid">
+  <ProjectModuleNav projectId={id!} client:load />
+  <ProjectHeader client:load projectId={id!} moduleName="Budget" moduleIcon="💵" />
+
+  <!-- Main Content Area with Left Margin for Sidebar -->
+  <div class="min-h-screen bg-gray-900 ml-64">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">Budget Tracking</h1>
+        <p class="text-gray-400">Manage and track project budget and expenses</p>
+      </div>
+
+      <div id="budget-container" data-project-id={id}></div>
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById('budget-container');
+    const projectId = container?.getAttribute('data-project-id');
+
+    if (projectId && container) {
+      // Fetch project budget data
+      fetch(`/api/projects/${projectId}`)
+        .then(response => response.json())
+        .then(data => {
+          const project = data.project || data.data?.project || data;
+          if (project) {
+            renderBudgetDashboard(project, container);
+          } else {
+            container.innerHTML = '<div class="text-center py-12 text-red-400">Failed to load budget data</div>';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading budget:', error);
+          container.innerHTML = '<div class="text-center py-12 text-red-400">Failed to load budget data</div>';
+        });
+    }
+
+    function formatCurrency(amount: number) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(amount);
+    }
+
+    function renderBudgetDashboard(project: any, container: HTMLElement) {
+      const totalBudget = project.totalBudget || 0;
+      const spentBudget = project.spentBudget || 0;
+      const committedBudget = project.committedBudget || 0;
+      const remainingBudget = project.remainingBudget || (totalBudget - spentBudget - committedBudget);
+
+      const spentPercentage = totalBudget > 0 ? (spentBudget / totalBudget) * 100 : 0;
+      const committedPercentage = totalBudget > 0 ? (committedBudget / totalBudget) * 100 : 0;
+      const remainingPercentage = totalBudget > 0 ? (remainingBudget / totalBudget) * 100 : 100;
+
+      container.innerHTML = `
+        <!-- Budget Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <!-- Total Budget Card -->
+          <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-gray-400">Total Budget</h3>
+              <span class="text-2xl">💵</span>
+            </div>
+            <p class="text-3xl font-bold text-white">${formatCurrency(totalBudget)}</p>
+            <p class="text-xs text-gray-500 mt-2">Original contract amount</p>
+          </div>
+
+          <!-- Spent Card -->
+          <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 border-l-4 border-l-red-500">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-gray-400">Spent</h3>
+              <span class="text-2xl">📤</span>
+            </div>
+            <p class="text-3xl font-bold text-red-400">${formatCurrency(spentBudget)}</p>
+            <p class="text-xs text-gray-500 mt-2">${spentPercentage.toFixed(1)}% of budget</p>
+          </div>
+
+          <!-- Committed Card -->
+          <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 border-l-4 border-l-yellow-500">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-gray-400">Committed</h3>
+              <span class="text-2xl">📋</span>
+            </div>
+            <p class="text-3xl font-bold text-yellow-400">${formatCurrency(committedBudget)}</p>
+            <p class="text-xs text-gray-500 mt-2">${committedPercentage.toFixed(1)}% of budget</p>
+          </div>
+
+          <!-- Remaining Card -->
+          <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 border-l-4" style="border-left-color: #3D9991;">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-gray-400">Remaining</h3>
+              <span class="text-2xl">💰</span>
+            </div>
+            <p class="text-3xl font-bold" style="color: #3D9991;">${formatCurrency(remainingBudget)}</p>
+            <p class="text-xs text-gray-500 mt-2">${remainingPercentage.toFixed(1)}% available</p>
+          </div>
+        </div>
+
+        <!-- Budget Breakdown Chart -->
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8 border border-gray-700">
+          <h2 class="text-xl font-bold text-white mb-6">Budget Breakdown</h2>
+
+          <!-- Visual Bar Chart -->
+          <div class="mb-6">
+            <div class="flex items-center text-sm text-gray-400 mb-2">
+              <span class="w-24">Spent:</span>
+              <div class="flex-1 bg-gray-700 rounded-full h-8 overflow-hidden">
+                <div class="bg-red-500 h-full flex items-center justify-end pr-3 text-white text-xs font-medium" style="width: ${spentPercentage}%;">
+                  ${spentPercentage > 10 ? formatCurrency(spentBudget) : ''}
+                </div>
+              </div>
+              ${spentPercentage <= 10 ? `<span class="ml-2 text-red-400">${formatCurrency(spentBudget)}</span>` : ''}
+            </div>
+
+            <div class="flex items-center text-sm text-gray-400 mb-2">
+              <span class="w-24">Committed:</span>
+              <div class="flex-1 bg-gray-700 rounded-full h-8 overflow-hidden">
+                <div class="bg-yellow-500 h-full flex items-center justify-end pr-3 text-white text-xs font-medium" style="width: ${committedPercentage}%;">
+                  ${committedPercentage > 10 ? formatCurrency(committedBudget) : ''}
+                </div>
+              </div>
+              ${committedPercentage <= 10 ? `<span class="ml-2 text-yellow-400">${formatCurrency(committedBudget)}</span>` : ''}
+            </div>
+
+            <div class="flex items-center text-sm text-gray-400">
+              <span class="w-24">Remaining:</span>
+              <div class="flex-1 bg-gray-700 rounded-full h-8 overflow-hidden">
+                <div class="h-full flex items-center justify-end pr-3 text-white text-xs font-medium" style="width: ${remainingPercentage}%; background-color: #3D9991;">
+                  ${remainingPercentage > 10 ? formatCurrency(remainingBudget) : ''}
+                </div>
+              </div>
+              ${remainingPercentage <= 10 ? `<span class="ml-2" style="color: #3D9991;">${formatCurrency(remainingBudget)}</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Detailed Breakdown Table -->
+          <div class="overflow-hidden rounded-lg border border-gray-700">
+            <table class="min-w-full divide-y divide-gray-700">
+              <thead class="bg-gray-900">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Category</th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Percentage</th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-700">
+                <tr class="hover:bg-gray-750">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 rounded-full bg-red-500 mr-3"></div>
+                      Spent
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-400 font-medium">${formatCurrency(spentBudget)}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-400">${spentPercentage.toFixed(1)}%</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-900 text-red-300">Paid</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-750">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 rounded-full bg-yellow-500 mr-3"></div>
+                      Committed
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-yellow-400 font-medium">${formatCurrency(committedBudget)}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-400">${committedPercentage.toFixed(1)}%</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-900 text-yellow-300">Pending</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-750">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <div class="flex items-center">
+                      <div class="w-3 h-3 rounded-full mr-3" style="background-color: #3D9991;"></div>
+                      Remaining
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium" style="color: #3D9991;">${formatCurrency(remainingBudget)}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-400">${remainingPercentage.toFixed(1)}%</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full text-white" style="background-color: #3D9991;">Available</span>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-900 border-t-2 border-gray-600">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-white">Total Budget</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-white">${formatCurrency(totalBudget)}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-400">100%</td>
+                  <td class="px-6 py-4"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Budget Health Indicator -->
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+          <h2 class="text-xl font-bold text-white mb-4">Budget Health</h2>
+          <div class="space-y-4">
+            ${remainingPercentage > 20 ? `
+              <div class="flex items-start gap-3 p-4 bg-green-900/20 border border-green-800 rounded-lg">
+                <span class="text-2xl">✅</span>
+                <div>
+                  <h3 class="text-sm font-semibold text-green-400">Budget is Healthy</h3>
+                  <p class="text-xs text-gray-400 mt-1">You have ${remainingPercentage.toFixed(1)}% of the budget remaining. Continue monitoring expenditures.</p>
+                </div>
+              </div>
+            ` : remainingPercentage > 10 ? `
+              <div class="flex items-start gap-3 p-4 bg-yellow-900/20 border border-yellow-800 rounded-lg">
+                <span class="text-2xl">⚠️</span>
+                <div>
+                  <h3 class="text-sm font-semibold text-yellow-400">Budget Caution</h3>
+                  <p class="text-xs text-gray-400 mt-1">Only ${remainingPercentage.toFixed(1)}% of the budget remains. Monitor spending closely.</p>
+                </div>
+              </div>
+            ` : `
+              <div class="flex items-start gap-3 p-4 bg-red-900/20 border border-red-800 rounded-lg">
+                <span class="text-2xl">🚨</span>
+                <div>
+                  <h3 class="text-sm font-semibold text-red-400">Budget Alert</h3>
+                  <p class="text-xs text-gray-400 mt-1">Only ${remainingPercentage.toFixed(1)}% of the budget remains. Review all pending expenditures immediately.</p>
+                </div>
+              </div>
+            `}
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-700">
+              <div>
+                <p class="text-xs text-gray-400">Burn Rate</p>
+                <p class="text-lg font-semibold text-white">${spentPercentage.toFixed(1)}%</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">Total Allocated</p>
+                <p class="text-lg font-semibold text-white">${formatCurrency(spentBudget + committedBudget)}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">Available</p>
+                <p class="text-lg font-semibold" style="color: #3D9991;">${formatCurrency(remainingBudget)}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">Utilization</p>
+                <p class="text-lg font-semibold text-white">${((spentBudget + committedBudget) / totalBudget * 100).toFixed(1)}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Related Modules -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <a href="/projects/${projectId}/change-orders" class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition-colors">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-2xl">📝</span>
+              <h3 class="text-lg font-semibold text-white">Change Orders</h3>
+            </div>
+            <p class="text-sm text-gray-400">Review pending change orders that may impact budget</p>
+          </a>
+
+          <a href="/projects/${projectId}/payment-applications" class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition-colors">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-2xl">💰</span>
+              <h3 class="text-lg font-semibold text-white">Payment Apps</h3>
+            </div>
+            <p class="text-sm text-gray-400">Track payment applications and billing</p>
+          </a>
+
+          <a href="/projects/${projectId}/estimating" class="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-gray-600 transition-colors">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-2xl">📊</span>
+              <h3 class="text-lg font-semibold text-white">Estimating</h3>
+            </div>
+            <p class="text-sm text-gray-400">View detailed cost estimates and breakdowns</p>
+          </a>
+        </div>
+      `;
+    }
+  </script>
+</Layout>
