@@ -66,6 +66,22 @@ export function getMockUser(role: 'gc' | 'owner' | 'architect' | 'sub' = 'gc'): 
 }
 
 /**
+ * Get mock user by email address
+ * Returns the mock user with matching email, or undefined if not found
+ */
+export function getMockUserByEmail(email: string): { id: number; email: string; role: string; companyId: number | null } | undefined {
+  const user = Object.values(MOCK_USERS).find(u => u.email === email);
+  if (!user) return undefined;
+
+  return {
+    id: parseInt(user._id),
+    email: user.email,
+    role: user.role.toLowerCase(),
+    companyId: 1, // Default company for mock users
+  };
+}
+
+/**
  * Check if we're in development mode with auth bypass
  */
 export function isAuthBypassed(): boolean {

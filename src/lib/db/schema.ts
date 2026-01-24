@@ -11,6 +11,48 @@ export const taskStatusEnum = pgEnum('task_status', ['pending', 'in_progress', '
 export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
 export const taskTypeEnum = pgEnum('task_type', ['general', 'submittal', 'rfi', 'inspection', 'safety', 'milestone']);
 
+// Companies Table - Multi-tenant support
+export const companies = pgTable('companies', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 100 }).unique(),
+  domain: varchar('domain', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  email: varchar('email', { length: 255 }),
+  address: text('address'),
+  city: varchar('city', { length: 100 }),
+  state: varchar('state', { length: 50 }),
+  zipCode: varchar('zip_code', { length: 20 }),
+  website: varchar('website', { length: 255 }),
+  licenseNumber: varchar('license_number', { length: 100 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Company Branding - Custom branding settings for each company
+export const companyBranding = pgTable('company_branding', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  logoUrl: varchar('logo_url', { length: 500 }),
+  logoLightUrl: varchar('logo_light_url', { length: 500 }),
+  logoDarkUrl: varchar('logo_dark_url', { length: 500 }),
+  faviconUrl: varchar('favicon_url', { length: 500 }),
+  primaryColor: varchar('primary_color', { length: 7 }).default('#FF6600'),
+  secondaryColor: varchar('secondary_color', { length: 7 }).default('#3D9991'),
+  accentColor: varchar('accent_color', { length: 7 }).default('#4BAAD8'),
+  backgroundLight: varchar('background_light', { length: 7 }),
+  backgroundDark: varchar('background_dark', { length: 7 }),
+  textPrimaryLight: varchar('text_primary_light', { length: 7 }),
+  textPrimaryDark: varchar('text_primary_dark', { length: 7 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
+export type CompanyBranding = typeof companyBranding.$inferSelect;
+export type NewCompanyBranding = typeof companyBranding.$inferInsert;
+
 // Users Table
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -71,6 +113,9 @@ export const projects = pgTable('projects', {
   createdBy: integer('created_by'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Archive status
+  isArchived: boolean('is_archived').default(false).notNull(),
 
   // Soft delete
   deletedAt: timestamp('deleted_at'),
@@ -1678,6 +1723,72 @@ export const mwbeParticipation = pgTable('mwbe_participation', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// ========================================
+// Document Indexing & Search
+// ========================================
+
+// Indexed Documents - For full-text search across all project documents
+export const indexedDocuments = pgTable('indexed_documents', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').references(() => projects.id),
+
+  // Source information
+  sourceType: varchar('source_type', { length: 50 }).notNull(), // 'file', 'email', 'rfi', 'submittal', etc.
+  sourceId: integer('source_id'),
+  sourceUrl: text('source_url'),
+
+  // Document metadata
+  title: varchar('title', { length: 500 }).notNull(),
+  fileName: varchar('file_name', { length: 500 }),
+  fileType: varchar('file_type', { length: 50 }),
+  fileSizeBytes: integer('file_size_bytes'),
+
+  // Content for search
+  content: text('content'), // Extracted text content
+  contentHash: varchar('content_hash', { length: 64 }), // SHA-256 for deduplication
+
+  // Search metadata
+  keywords: jsonb('keywords').default('[]'), // AI-extracted keywords
+  entities: jsonb('entities').default('[]'), // Named entities (people, companies, etc.)
+  categories: jsonb('categories').default('[]'), // Document categories
+
+  // Processing status
+  indexStatus: varchar('index_status', { length: 50 }).default('pending'), // pending, processing, indexed, failed
+  lastIndexedAt: timestamp('last_indexed_at'),
+  indexError: text('index_error'),
+
+  // Metadata
+  createdBy: integer('created_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Document Search History - Track user searches for analytics
+export const documentSearchHistory = pgTable('document_search_history', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  projectId: integer('project_id').references(() => projects.id),
+
+  // Search details
+  searchQuery: text('search_query').notNull(),
+  filters: jsonb('filters').default('{}'), // Applied filters
+
+  // Results
+  resultCount: integer('result_count').default(0),
+  clickedDocumentIds: jsonb('clicked_document_ids').default('[]'),
+
+  // Analytics
+  searchDurationMs: integer('search_duration_ms'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Type exports for document indexing
+export type IndexedDocument = typeof indexedDocuments.$inferSelect;
+export type NewIndexedDocument = typeof indexedDocuments.$inferInsert;
+export type DocumentSearchHistory = typeof documentSearchHistory.$inferSelect;
+export type NewDocumentSearchHistory = typeof documentSearchHistory.$inferInsert;
 
 // Type exports for bidding system
 export type BidPackage = typeof bidPackages.$inferSelect;
