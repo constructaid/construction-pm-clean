@@ -134,11 +134,12 @@ export const PUT: APIRoute = apiHandler(async (context) => {
 
   console.log('Task updated successfully:', updated.id);
 
-  // Log the update to audit log
+  // Log the update to audit log using authenticated user
+  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)

@@ -19,6 +19,7 @@ import {
   validateBody,
   validateQuery,
   checkRateLimit,
+  UnauthorizedError,
 } from '../../lib/api/error-handler';
 import {
   createTaskSchema,
@@ -30,6 +31,7 @@ import {
   createAuditContext,
   sanitizeForAudit,
 } from '../../lib/api/audit-logger';
+import { checkRBAC } from '../../lib/middleware/rbac';
 import { z } from 'zod';
 
 export const prerender = false;
@@ -51,6 +53,16 @@ const tasksQuerySchema = paginationSchema.extend({
 export const GET: APIRoute = apiHandler(async (context) => {
   // Validate query parameters
   const query = validateQuery(context, tasksQuerySchema);
+
+  // RBAC Check - projectId is required for tasks
+  if (!query.projectId) {
+    throw new UnauthorizedError('projectId is required to fetch tasks');
+  }
+
+  const rbacResult = await checkRBAC(context, query.projectId, 'canRead');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
 
   // Rate limiting (200 requests per minute)
   const rateLimitKey = `tasks-list-${context.clientAddress}`;
@@ -168,6 +180,12 @@ export const POST: APIRoute = apiHandler(async (context) => {
   // Validate request body
   const data = await validateBody(context, createTaskSchema);
 
+  // RBAC Check - requires canWrite permission for tasks
+  const rbacResult = await checkRBAC(context, data.projectId, 'canWrite');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
   // Rate limiting (20 creates per minute)
   const rateLimitKey = `task-create-${context.clientAddress}`;
   checkRateLimit(rateLimitKey, 20, 60000);
@@ -199,11 +217,12 @@ export const POST: APIRoute = apiHandler(async (context) => {
 
   console.log('Task created successfully:', result.id);
 
-  // Log the creation to audit log
+  // Log the creation to audit log using authenticated user
+  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)

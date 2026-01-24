@@ -176,13 +176,14 @@ export const PUT: APIRoute = apiHandler(async (context) => {
     await db.insert(divisionContacts).values(divisionInserts);
   }
 
-  // Detect changes and log to audit
+  // Detect changes and log to audit using authenticated user
+  const user = context.locals.user!;
   const changes = detectChanges(existing, updated);
   if (Object.keys(changes).length > 0) {
     const auditContext = createAuditContext(context, {
-      id: 1, // TODO: Replace with actual authenticated user ID
-      email: 'system@example.com', // TODO: Replace with actual user email
-      role: 'ADMIN', // TODO: Replace with actual user role
+      id: user.id,
+      email: user.email,
+      role: user.role,
     });
 
     logUpdate(
@@ -207,7 +208,7 @@ export const PUT: APIRoute = apiHandler(async (context) => {
 
 export const DELETE: APIRoute = apiHandler(async (context) => {
   const contactId = parseInt(context.params.id!);
-  const userId = 1; // TODO: Replace with authenticated user ID
+  const user = context.locals.user!;
 
   // Rate limiting (50 deletes per minute)
   const rateLimitKey = `contact-delete-${context.clientAddress}`;
@@ -225,16 +226,16 @@ export const DELETE: APIRoute = apiHandler(async (context) => {
     throw new NotFoundError('Contact not found');
   }
 
-  // Soft delete contact
-  await db.execute(softDelete(contacts, contactId, userId));
+  // Soft delete contact using authenticated user
+  await db.execute(softDelete(contacts, contactId, user.id));
 
   console.log('Contact soft deleted successfully:', contactId);
 
   // Log the deletion to audit log
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   logDelete(

@@ -42,11 +42,17 @@ import { z } from 'zod';
 const projectsQuerySchema = paginationSchema.extend({
   userId: z.coerce.number().int().positive().optional(),
   status: z.enum(['planning', 'bidding', 'pre_construction', 'in_progress', 'closeout', 'completed', 'on_hold', 'all']).default('all'),
+  search: z.string().optional(),
+  minBudget: z.coerce.number().nonnegative().optional(),
+  maxBudget: z.coerce.number().nonnegative().optional(),
+  startDateFrom: z.string().optional(),
+  startDateTo: z.string().optional(),
+  archived: z.enum(['true', 'false', 'all']).default('false'),
 });
 
 export const GET: APIRoute = apiHandler(async (context) => {
-  // Optional: Require authentication if needed
-  // requireAuth(context);
+  // Require authentication for project list
+  requireAuth(context);
 
   // Validate query parameters
   const query = validateQuery(context, projectsQuerySchema);
@@ -57,72 +63,92 @@ export const GET: APIRoute = apiHandler(async (context) => {
     : `projects-list-${context.clientAddress}`;
   checkRateLimit(rateLimitKey, 100, 60000);
 
-  console.log('GET /api/projects - userId:', query.userId, 'status:', query.status);
+  const effectiveUserId = query.userId || context.locals.user?.id;
+  console.log('GET /api/projects - userId:', effectiveUserId, '(from:', query.userId ? 'query' : 'session', ') status:', query.status, 'search:', query.search, 'archived:', query.archived);
 
-  // Build query - only non-deleted projects
-  let dbQuery = db
-    .select()
-    .from(projects)
-    .where(excludeDeleted());
+  // Build WHERE conditions array
+  const conditions: any[] = [excludeDeleted()];
 
-  // Filter by user (owner or GC) if userId provided
-  if (query.userId) {
-    dbQuery = dbQuery.where(
-      and(
-        or(
-          eq(projects.ownerId, query.userId),
-          eq(projects.generalContractorId, query.userId)
-        ),
-        excludeDeleted()
+  // Filter by archived status (default: exclude archived projects)
+  if (query.archived === 'true') {
+    conditions.push(eq(projects.isArchived, true));
+  } else if (query.archived === 'false') {
+    conditions.push(eq(projects.isArchived, false));
+  }
+  // If 'all', don't add any filter for isArchived
+
+  // Filter by user (owner, GC, creator, or team member)
+  // Use userId from query if provided, otherwise use authenticated user
+  const userId = query.userId || context.locals.user?.id;
+  if (userId) {
+    conditions.push(
+      or(
+        eq(projects.ownerId, userId),
+        eq(projects.generalContractorId, userId),
+        eq(projects.createdBy, userId),
+        sql`${projects.teamMembers}::jsonb @> ${JSON.stringify([userId])}`
       )
-    ) as typeof dbQuery;
+    );
   }
 
   // Add status filter if provided
   if (query.status && query.status !== 'all') {
-    dbQuery = dbQuery.where(
-      and(
-        eq(projects.status, query.status as any),
-        excludeDeleted()
-      )
-    ) as typeof dbQuery;
+    conditions.push(eq(projects.status, query.status as any));
   }
+
+  // Add search filter (searches name, project number, description, address, city)
+  if (query.search && query.search.trim() !== '') {
+    const searchTerm = `%${query.search.toLowerCase()}%`;
+    conditions.push(
+      or(
+        sql`LOWER(${projects.name}) LIKE ${searchTerm}`,
+        sql`LOWER(${projects.projectNumber}) LIKE ${searchTerm}`,
+        sql`LOWER(${projects.description}) LIKE ${searchTerm}`,
+        sql`LOWER(${projects.address}) LIKE ${searchTerm}`,
+        sql`LOWER(${projects.city}) LIKE ${searchTerm}`
+      )
+    );
+  }
+
+  // Add budget range filters
+  if (query.minBudget !== undefined) {
+    conditions.push(sql`${projects.totalBudget} >= ${query.minBudget}`);
+  }
+  if (query.maxBudget !== undefined) {
+    conditions.push(sql`${projects.totalBudget} <= ${query.maxBudget}`);
+  }
+
+  // Add date range filters
+  if (query.startDateFrom) {
+    conditions.push(sql`${projects.startDate} >= ${query.startDateFrom}`);
+  }
+  if (query.startDateTo) {
+    conditions.push(sql`${projects.startDate} <= ${query.startDateTo}`);
+  }
+
+  // Build query with all conditions
+  let dbQuery = db
+    .select()
+    .from(projects)
+    .where(and(...conditions));
 
   // Apply pagination
   const result = await dbQuery
     .limit(query.limit)
     .offset((query.page - 1) * query.limit);
 
-  // Get total count for pagination
-  const countQuery = db
+  // Get total count for pagination with same filters
+  const countResult = await db
     .select({ count: sql<number>`cast(count(*) as integer)` })
     .from(projects)
-    .where(excludeDeleted());
+    .where(and(...conditions));
 
-  // Apply same filters to count
-  let finalCountQuery = countQuery;
-  if (query.userId) {
-    finalCountQuery = finalCountQuery.where(
-      and(
-        or(
-          eq(projects.ownerId, query.userId),
-          eq(projects.generalContractorId, query.userId)
-        ),
-        excludeDeleted()
-      )
-    ) as typeof finalCountQuery;
-  }
-  if (query.status && query.status !== 'all') {
-    finalCountQuery = finalCountQuery.where(
-      and(
-        eq(projects.status, query.status as any),
-        excludeDeleted()
-      )
-    ) as typeof finalCountQuery;
-  }
-
-  const countResult = await finalCountQuery;
   const count = countResult[0]?.count || 0;
+
+  console.log(`[API /projects] Found ${result.length} projects for user ${userId}. Total: ${count}`);
+  if (result.length > 0) {
+    console.log(`[API /projects] First project: ${result[0].name} (ID: ${result[0].id})`);
+  }
 
   return {
     projects: result,
@@ -140,9 +166,14 @@ export const GET: APIRoute = apiHandler(async (context) => {
 // ========================================
 
 export const POST: APIRoute = apiHandler(async (context) => {
-  // Optional: Require authentication and authorization
-  // requireAuth(context);
-  // requireRole(context, ['GC', 'ADMIN']);
+  // Require authentication and GC/ADMIN role to create projects
+  requireAuth(context);
+
+  // Only GC (General Contractors) and ADMIN can create projects
+  const user = context.locals.user;
+  if (!user || (user.role !== 'GC' && user.role !== 'ADMIN')) {
+    throw new UnauthorizedError('Only General Contractors and Admins can create projects');
+  }
 
   // Validate request body against schema
   const data = await validateBody(context, createProjectSchema);
@@ -217,12 +248,11 @@ export const POST: APIRoute = apiHandler(async (context) => {
 
   console.log('Project created successfully:', result.id);
 
-  // Log the creation to audit log
-  // Note: In production, get user from context.locals.user (authentication)
+  // Log the creation to audit log using authenticated user
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)

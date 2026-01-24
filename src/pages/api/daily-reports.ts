@@ -159,11 +159,12 @@ export const POST: APIRoute = apiHandler(async (context) => {
 
   console.log('Daily report created successfully:', result.id);
 
-  // Log the creation to audit log
+  // Log the creation to audit log using authenticated user
+  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)

@@ -19,6 +19,7 @@ import {
   validateBody,
   validateQuery,
   checkRateLimit,
+  UnauthorizedError,
 } from '../../lib/api/error-handler';
 import {
   createChangeOrderSchema,
@@ -30,6 +31,8 @@ import {
   createAuditContext,
   sanitizeForAudit,
 } from '../../lib/api/audit-logger';
+import { checkRBAC } from '../../lib/middleware/rbac';
+import { filterFinancialData } from '../../lib/middleware/data-filters';
 import { z } from 'zod';
 
 export const prerender = false;
@@ -50,6 +53,18 @@ const changeOrdersQuerySchema = paginationSchema.extend({
 export const GET: APIRoute = apiHandler(async (context) => {
   // Validate query parameters
   const query = validateQuery(context, changeOrdersQuerySchema);
+
+  // RBAC Check - projectId is required for change orders
+  if (!query.projectId) {
+    throw new UnauthorizedError('projectId is required to fetch change orders');
+  }
+
+  const rbacResult = await checkRBAC(context, query.projectId, 'canRead');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const { teamMember, permissions } = rbacResult;
 
   // Rate limiting (200 requests per minute)
   const rateLimitKey = `change-orders-list-${context.clientAddress}`;
@@ -110,8 +125,11 @@ export const GET: APIRoute = apiHandler(async (context) => {
 
   console.log(`Found ${result.length} change orders (${count} total)`);
 
+  // Filter financial data based on permissions
+  const filteredChangeOrders = result.map(co => filterFinancialData(co, permissions));
+
   return {
-    changeOrders: result,
+    changeOrders: filteredChangeOrders,
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -130,6 +148,14 @@ export const GET: APIRoute = apiHandler(async (context) => {
 export const POST: APIRoute = apiHandler(async (context) => {
   // Validate request body
   const data = await validateBody(context, createChangeOrderSchema);
+
+  // RBAC Check - requires canWrite permission for change orders
+  const rbacResult = await checkRBAC(context, data.projectId, 'canWrite');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const { permissions } = rbacResult;
 
   // Rate limiting (20 creates per minute)
   const rateLimitKey = `change-order-create-${context.clientAddress}`;
@@ -173,11 +199,12 @@ export const POST: APIRoute = apiHandler(async (context) => {
 
   console.log('Change order created successfully:', result.id, result.changeOrderNumber);
 
-  // Log the creation to audit log
+  // Log the creation to audit log using authenticated user
+  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)
@@ -189,10 +216,13 @@ export const POST: APIRoute = apiHandler(async (context) => {
     'Change order created via API'
   ).catch(err => console.error('[AUDIT] Failed to log create:', err));
 
+  // Filter financial data based on permissions
+  const filteredChangeOrder = filterFinancialData(result, permissions);
+
   return {
     message: 'Change order created successfully',
     changeOrderId: result.id,
     changeOrderNumber: result.changeOrderNumber,
-    changeOrder: result,
+    changeOrder: filteredChangeOrder,
   };
 });

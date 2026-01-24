@@ -20,7 +20,10 @@ import {
   validateParams,
   NotFoundError,
   checkRateLimit,
+  UnauthorizedError,
 } from '../../../lib/api/error-handler';
+import { checkRBAC } from '../../../lib/middleware/rbac';
+import { filterFinancialData } from '../../../lib/middleware/data-filters';
 import {
   updateProjectSchema,
   idParamSchema,
@@ -43,6 +46,14 @@ export const GET: APIRoute = apiHandler(async (context) => {
   // Validate URL parameters
   const params = validateParams(context.params, idParamSchema);
 
+  // RBAC Check - user must be a team member with canRead permission
+  const rbacResult = await checkRBAC(context, params.id, 'canRead');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const { permissions } = rbacResult;
+
   // Rate limiting
   checkRateLimit(`project-detail-${context.clientAddress}`, 200, 60000);
 
@@ -62,7 +73,10 @@ export const GET: APIRoute = apiHandler(async (context) => {
     throw new NotFoundError('Project', params.id);
   }
 
-  return { project };
+  // Filter financial data based on permissions
+  const filteredProject = filterFinancialData(project, permissions);
+
+  return { project: filteredProject };
 });
 
 // ========================================
@@ -75,6 +89,14 @@ export const PUT: APIRoute = apiHandler(async (context) => {
 
   // Validate request body
   const data = await validateBody(context, updateProjectSchema);
+
+  // RBAC Check - user must have canWrite permission to update projects
+  const rbacResult = await checkRBAC(context, params.id, 'canWrite');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const { permissions } = rbacResult;
 
   // Rate limiting
   checkRateLimit(`project-update-${context.clientAddress}`, 20, 60000);
@@ -136,12 +158,12 @@ export const PUT: APIRoute = apiHandler(async (context) => {
 
   console.log('Project updated successfully:', updated.id);
 
-  // Log the update to audit log
-  // Note: In production, get user from context.locals.user (authentication)
+  // Log the update to audit log using authenticated user
+  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)
@@ -154,9 +176,12 @@ export const PUT: APIRoute = apiHandler(async (context) => {
     'Project updated via API'
   ).catch(err => console.error('[AUDIT] Failed to log update:', err));
 
+  // Filter financial data based on permissions
+  const filteredProject = filterFinancialData(updated, permissions);
+
   return {
     message: 'Project updated successfully',
-    project: updated,
+    project: filteredProject,
   };
 });
 
@@ -167,6 +192,12 @@ export const PUT: APIRoute = apiHandler(async (context) => {
 export const DELETE: APIRoute = apiHandler(async (context) => {
   // Validate URL parameters
   const params = validateParams(context.params, idParamSchema);
+
+  // RBAC Check - user must have canDelete permission to delete projects
+  const rbacResult = await checkRBAC(context, params.id, 'canDelete');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
 
   // Rate limiting
   checkRateLimit(`project-delete-${context.clientAddress}`, 10, 60000);
@@ -187,19 +218,18 @@ export const DELETE: APIRoute = apiHandler(async (context) => {
     throw new NotFoundError('Project', params.id);
   }
 
-  // Soft delete the project
-  // Note: In a real app, you'd get the user ID from context.locals.user
-  const userId = 1; // TODO: Get from authenticated user
+  // Soft delete the project using authenticated user
+  const user = context.locals.user!;
 
-  await db.execute(softDelete(projects, params.id, userId));
+  await db.execute(softDelete(projects, params.id, user.id));
 
   console.log('Project soft deleted:', params.id);
 
   // Log the delete to audit log
   const auditContext = createAuditContext(context, {
-    id: userId,
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)

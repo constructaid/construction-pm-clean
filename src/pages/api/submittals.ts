@@ -19,6 +19,7 @@ import {
   validateBody,
   validateQuery,
   checkRateLimit,
+  UnauthorizedError,
 } from '../../lib/api/error-handler';
 import {
   createSubmittalSchema,
@@ -30,6 +31,8 @@ import {
   createAuditContext,
   sanitizeForAudit,
 } from '../../lib/api/audit-logger';
+import { checkRBAC } from '../../lib/middleware/rbac';
+import { filterByScope } from '../../lib/middleware/data-filters';
 import { z } from 'zod';
 
 export const prerender = false;
@@ -50,6 +53,18 @@ const submittalsQuerySchema = paginationSchema.extend({
 export const GET: APIRoute = apiHandler(async (context) => {
   // Validate query parameters
   const query = validateQuery(context, submittalsQuerySchema);
+
+  // RBAC Check - projectId is required for submittals
+  if (!query.projectId) {
+    throw new UnauthorizedError('projectId is required to fetch submittals');
+  }
+
+  const rbacResult = await checkRBAC(context, query.projectId, 'canRead');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const { teamMember } = rbacResult;
 
   // Rate limiting (200 requests per minute)
   const rateLimitKey = `submittals-list-${context.clientAddress}`;
@@ -112,8 +127,11 @@ export const GET: APIRoute = apiHandler(async (context) => {
 
   console.log(`Found ${result.length} submittals (${count} total)`);
 
+  // Filter submittals by scope for subcontractors
+  const filteredSubmittals = filterByScope(result, teamMember);
+
   return {
-    submittals: result,
+    submittals: filteredSubmittals,
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -132,6 +150,12 @@ export const GET: APIRoute = apiHandler(async (context) => {
 export const POST: APIRoute = apiHandler(async (context) => {
   // Validate request body
   const data = await validateBody(context, createSubmittalSchema);
+
+  // RBAC Check - requires canWrite permission for submittals
+  const rbacResult = await checkRBAC(context, data.projectId, 'canWrite');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
 
   // Rate limiting (20 creates per minute)
   const rateLimitKey = `submittal-create-${context.clientAddress}`;
@@ -177,11 +201,12 @@ export const POST: APIRoute = apiHandler(async (context) => {
 
   console.log('Submittal created successfully:', result.id, result.submittalNumber);
 
-  // Log the creation to audit log
+  // Log the creation to audit log using authenticated user
+  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
-    id: 1, // TODO: Replace with actual authenticated user ID
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)

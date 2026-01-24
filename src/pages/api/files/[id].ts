@@ -11,7 +11,7 @@ import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
     const { id } = params;
 
@@ -54,13 +54,14 @@ export const DELETE: APIRoute = async ({ params }) => {
       await unlink(filePath);
     }
 
-    // Log activity
+    // Log activity using authenticated user
+    const user = locals.user;
     await logFileDelete({
       projectId: file.projectId,
       fileId: file.id,
       fileName: file.originalName,
-      userId: 1,
-      userName: 'Mock User'
+      userId: user?.id || 1,
+      userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Unknown User'
     });
 
     return new Response(

@@ -11,8 +11,11 @@ import { verifyAccessToken } from './lib/auth/jwt';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   // Development Mode Bypass
-  // Automatically authenticate as a test GC user when DEV_BYPASS_AUTH is enabled
-  const bypassAuth = import.meta.env.PUBLIC_DEV_BYPASS_AUTH === 'true' || process.env.DEV_BYPASS_AUTH === 'true';
+  // SECURITY: Only allow bypass in development mode AND when explicitly enabled
+  // This prevents accidental bypass in production even if env var is misconfigured
+  const isDevelopment = import.meta.env.DEV || process.env.NODE_ENV === 'development';
+  const bypassRequested = import.meta.env.PUBLIC_DEV_BYPASS_AUTH === 'true' || process.env.DEV_BYPASS_AUTH === 'true';
+  const bypassAuth = isDevelopment && bypassRequested;
 
   if (bypassAuth) {
     context.locals.user = {
@@ -25,6 +28,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     };
     console.log('[MIDDLEWARE] 🔓 DEV MODE BYPASS - Authenticated as demo.pm@constructaid.com (GC)');
     return next();
+  } else if (bypassRequested && !isDevelopment) {
+    console.warn('[MIDDLEWARE] ⚠️ DEV_BYPASS_AUTH ignored - not in development mode');
   }
 
   // Normal authentication flow

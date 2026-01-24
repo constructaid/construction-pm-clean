@@ -12,7 +12,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const formData = await request.formData();
 
@@ -71,14 +71,15 @@ export const POST: APIRoute = async ({ request }) => {
 
     const uploadedFile = result[0];
 
-    // Log activity
+    // Log activity using authenticated user
+    const user = locals.user;
     await logFileUpload({
       projectId,
       fileId: uploadedFile.id,
       fileName: file.name,
       folderType,
-      userId: 1,
-      userName: 'Mock User'
+      userId: user?.id || 1,
+      userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Unknown User'
     });
 
     return new Response(
