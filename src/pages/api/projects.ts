@@ -20,6 +20,7 @@ import {
   validateBody,
   validateQuery,
   ConflictError,
+  UnauthorizedError,
   checkRateLimit,
 } from '../../lib/api/error-handler';
 import {
@@ -32,6 +33,7 @@ import {
   createAuditContext,
   sanitizeForAudit,
 } from '../../lib/api/audit-logger';
+import { createRequestLogger } from '../../lib/logger';
 import { z } from 'zod';
 
 // ========================================
@@ -51,6 +53,8 @@ const projectsQuerySchema = paginationSchema.extend({
 });
 
 export const GET: APIRoute = apiHandler(async (context) => {
+  const log = createRequestLogger(context.request, context.locals.user);
+
   // Require authentication for project list
   requireAuth(context);
 
@@ -64,7 +68,14 @@ export const GET: APIRoute = apiHandler(async (context) => {
   checkRateLimit(rateLimitKey, 100, 60000);
 
   const effectiveUserId = query.userId || context.locals.user?.id;
-  console.log('GET /api/projects - userId:', effectiveUserId, '(from:', query.userId ? 'query' : 'session', ') status:', query.status, 'search:', query.search, 'archived:', query.archived);
+  log.debug('Fetching projects', {
+    action: 'list',
+    effectiveUserId,
+    userIdSource: query.userId ? 'query' : 'session',
+    status: query.status,
+    search: query.search,
+    archived: query.archived,
+  });
 
   // Build WHERE conditions array
   const conditions: any[] = [excludeDeleted()];
@@ -145,10 +156,13 @@ export const GET: APIRoute = apiHandler(async (context) => {
 
   const count = countResult[0]?.count || 0;
 
-  console.log(`[API /projects] Found ${result.length} projects for user ${userId}. Total: ${count}`);
-  if (result.length > 0) {
-    console.log(`[API /projects] First project: ${result[0].name} (ID: ${result[0].id})`);
-  }
+  log.info('Projects fetched successfully', {
+    action: 'list',
+    resultCount: result.length,
+    totalCount: count,
+    page: query.page,
+    limit: query.limit,
+  });
 
   return {
     projects: result,
@@ -166,6 +180,8 @@ export const GET: APIRoute = apiHandler(async (context) => {
 // ========================================
 
 export const POST: APIRoute = apiHandler(async (context) => {
+  const log = createRequestLogger(context.request, context.locals.user);
+
   // Require authentication and GC/ADMIN role to create projects
   requireAuth(context);
 
@@ -184,7 +200,7 @@ export const POST: APIRoute = apiHandler(async (context) => {
     : `project-create-${context.clientAddress}`;
   checkRateLimit(rateLimitKey, 10, 60000);
 
-  console.log('POST /api/projects - Creating project:', data.name);
+  log.info('Creating project', { action: 'create', projectName: data.name });
 
   // Check if project number already exists (excluding deleted projects)
   const existing = await db
@@ -246,7 +262,12 @@ export const POST: APIRoute = apiHandler(async (context) => {
   // Insert project
   const [result] = await db.insert(projects).values(newProject).returning();
 
-  console.log('Project created successfully:', result.id);
+  log.info('Project created successfully', {
+    action: 'create',
+    projectId: result.id,
+    projectName: result.name,
+    projectNumber: result.projectNumber,
+  });
 
   // Log the creation to audit log using authenticated user
   const auditContext = createAuditContext(context, {
@@ -262,7 +283,7 @@ export const POST: APIRoute = apiHandler(async (context) => {
     sanitizeForAudit(result), // New values
     auditContext,
     'Project created via API'
-  ).catch(err => console.error('[AUDIT] Failed to log create:', err));
+  ).catch(err => log.error('Failed to log create audit', { projectId: result.id }, err instanceof Error ? err : new Error(String(err))));
 
   return {
     message: 'Project created successfully',

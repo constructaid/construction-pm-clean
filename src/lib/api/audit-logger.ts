@@ -13,6 +13,7 @@
 
 import { db, auditLog, type NewAuditLog } from '../db';
 import type { APIContext } from 'astro';
+import { logger } from '../logger';
 
 // ========================================
 // Types
@@ -87,10 +88,22 @@ export async function logAudit(params: {
     // Insert audit log (async, non-blocking)
     await db.insert(auditLog).values(auditEntry);
 
-    console.log(`[AUDIT] ${action} on ${tableName}#${recordId} by ${context?.user?.email || 'anonymous'}`);
+    logger.info(`Audit: ${action} on ${tableName}#${recordId}`, {
+      module: 'audit',
+      action,
+      tableName,
+      recordId,
+      userId: context?.user?.id,
+      userEmail: context?.user?.email,
+    });
   } catch (error) {
     // Log audit failures but don't throw - we don't want audit logging to break the app
-    console.error('[AUDIT ERROR] Failed to log audit event:', error);
+    logger.error('Failed to log audit event', {
+      module: 'audit',
+      action: params.action,
+      tableName: params.tableName,
+      recordId: params.recordId,
+    }, error instanceof Error ? error : new Error(String(error)));
   }
 }
 

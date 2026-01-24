@@ -7,6 +7,7 @@
 import type { APIContext } from 'astro';
 import { z, ZodError } from 'zod';
 import { formatZodErrors } from '../validation/schemas';
+import { logger } from '../logger';
 
 // ========================================
 // CUSTOM ERROR CLASSES
@@ -119,14 +120,17 @@ interface SuccessResponse<T = any> {
 export function handleError(error: unknown, context?: APIContext): Response {
   const timestamp = new Date().toISOString();
   const path = context?.url?.pathname;
+  const user = context?.locals?.user;
 
-  // Log error to console (in production, this should go to a logging service)
-  console.error('[API Error]', {
-    timestamp,
-    path,
-    error: error instanceof Error ? error.message : 'Unknown error',
-    stack: error instanceof Error ? error.stack : undefined,
-  });
+  // Log error with structured logger
+  logger.error('API Error', {
+    module: 'api',
+    endpoint: path,
+    method: context?.request?.method,
+    userId: user?.id,
+    userEmail: user?.email,
+    errorCode: error instanceof APIError ? error.code : 'UNKNOWN',
+  }, error instanceof Error ? error : new Error(String(error)));
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {

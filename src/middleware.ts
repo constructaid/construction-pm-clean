@@ -8,8 +8,11 @@
  */
 import { defineMiddleware } from 'astro:middleware';
 import { verifyAccessToken } from './lib/auth/jwt';
+import { logger } from './lib/logger';
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  const endpoint = context.url.pathname;
+
   // Development Mode Bypass
   // SECURITY: Only allow bypass in development mode AND when explicitly enabled
   // This prevents accidental bypass in production even if env var is misconfigured
@@ -26,10 +29,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
       firstName: 'Demo',
       lastName: 'PM',
     };
-    console.log('[MIDDLEWARE] 🔓 DEV MODE BYPASS - Authenticated as demo.pm@constructaid.com (GC)');
+    logger.debug('DEV MODE BYPASS - Using demo user', {
+      module: 'middleware',
+      userId: 1,
+      userEmail: 'demo.pm@constructaid.com',
+      userRole: 'GC',
+      endpoint,
+    });
     return next();
   } else if (bypassRequested && !isDevelopment) {
-    console.warn('[MIDDLEWARE] ⚠️ DEV_BYPASS_AUTH ignored - not in development mode');
+    logger.warn('DEV_BYPASS_AUTH ignored - not in development mode', {
+      module: 'middleware',
+      endpoint,
+    });
   }
 
   // Normal authentication flow
@@ -49,15 +61,29 @@ export const onRequest = defineMiddleware(async (context, next) => {
         companyId: payload.companyId,
       };
 
-      console.log(`[MIDDLEWARE] ✓ Authenticated user: ${payload.email} (${payload.role})`);
+      logger.debug('User authenticated', {
+        module: 'middleware',
+        userId: payload.userId,
+        userEmail: payload.email,
+        userRole: payload.role,
+        endpoint,
+      });
     } catch (error) {
       // Token is invalid or expired
-      console.log('[MIDDLEWARE] ✗ Invalid or expired access token');
+      logger.debug('Invalid or expired access token', {
+        module: 'middleware',
+        endpoint,
+      });
       context.locals.user = undefined;
     }
   } else {
-    // No token found
-    console.log('[MIDDLEWARE] No access token in cookies');
+    // No token found - only log for API routes to reduce noise
+    if (endpoint.startsWith('/api/')) {
+      logger.debug('No access token in cookies', {
+        module: 'middleware',
+        endpoint,
+      });
+    }
     context.locals.user = undefined;
   }
 
