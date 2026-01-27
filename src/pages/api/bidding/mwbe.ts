@@ -1,14 +1,26 @@
 /**
  * M/WBE Participation API - List and Create
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
-import { mwbeParticipation } from '../../../lib/db/schema';
+import { mwbeParticipation, bidPackages } from '../../../lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { checkRBAC } from '../../../lib/middleware/rbac';
+
+// Helper to get projectId from bid package
+async function getProjectIdFromBidPackage(bidPackageId: number): Promise<number | null> {
+  const [pkg] = await db
+    .select({ projectId: bidPackages.projectId })
+    .from(bidPackages)
+    .where(eq(bidPackages.id, bidPackageId));
+  return pkg?.projectId || null;
+}
 
 // GET - List all M/WBE participants for a bid package
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { url } = context;
     const bidPackageId = url.searchParams.get('bidPackageId');
 
     if (!bidPackageId) {
@@ -16,6 +28,21 @@ export const GET: APIRoute = async ({ url }) => {
         JSON.stringify({ success: false, error: 'Bid package ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from bid package for RBAC check
+    const projectId = await getProjectIdFromBidPackage(parseInt(bidPackageId));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     const participants = await db
@@ -50,8 +77,9 @@ export const GET: APIRoute = async ({ url }) => {
 };
 
 // POST - Create a new M/WBE participant
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const data = await request.json();
     const {
       bidPackageId,
@@ -75,6 +103,21 @@ export const POST: APIRoute = async ({ request }) => {
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from bid package for RBAC check
+    const projectId = await getProjectIdFromBidPackage(parseInt(bidPackageId));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Insert participant

@@ -1,14 +1,17 @@
 /**
  * Single Cost Estimate API Endpoint
  * Handles operations for a specific estimate
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../../lib/db';
 import { costEstimates, costEstimateLineItems } from '../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRBAC } from '../../../../lib/middleware/rbac';
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -29,6 +32,12 @@ export const GET: APIRoute = async ({ params }) => {
         JSON.stringify({ success: false, error: 'Estimate not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, estimate.projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Fetch line items for this estimate

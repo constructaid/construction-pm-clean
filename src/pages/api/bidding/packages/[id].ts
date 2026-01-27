@@ -1,14 +1,17 @@
 /**
  * Bid Package Detail API - Get, Update, Delete
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../../lib/db';
 import { bidPackages, costEstimates, costEstimateLineItems } from '../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRBAC } from '../../../../lib/middleware/rbac';
 
 // GET - Get bid package details with related estimates
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -29,6 +32,12 @@ export const GET: APIRoute = async ({ params }) => {
         JSON.stringify({ success: false, error: 'Bid package not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, bidPackage.projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Get related cost estimates
@@ -54,8 +63,9 @@ export const GET: APIRoute = async ({ params }) => {
 };
 
 // PATCH - Update bid package
-export const PATCH: APIRoute = async ({ params, request }) => {
+export const PATCH: APIRoute = async (context) => {
   try {
+    const { params, request } = context;
     const { id } = params;
     const data = await request.json();
 
@@ -64,6 +74,25 @@ export const PATCH: APIRoute = async ({ params, request }) => {
         JSON.stringify({ success: false, error: 'Bid package ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get bid package to find projectId for RBAC check
+    const [existingPackage] = await db
+      .select({ projectId: bidPackages.projectId })
+      .from(bidPackages)
+      .where(eq(bidPackages.id, parseInt(id)));
+
+    if (!existingPackage) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, existingPackage.projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Build update object
@@ -104,8 +133,9 @@ export const PATCH: APIRoute = async ({ params, request }) => {
 };
 
 // DELETE - Delete bid package
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -113,6 +143,25 @@ export const DELETE: APIRoute = async ({ params }) => {
         JSON.stringify({ success: false, error: 'Bid package ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get bid package to find projectId for RBAC check
+    const [existingPackage] = await db
+      .select({ projectId: bidPackages.projectId })
+      .from(bidPackages)
+      .where(eq(bidPackages.id, parseInt(id)));
+
+    if (!existingPackage) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project delete access
+    const rbacResult = await checkRBAC(context, existingPackage.projectId, 'canDelete');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     await db.delete(bidPackages).where(eq(bidPackages.id, parseInt(id)));

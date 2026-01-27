@@ -1,14 +1,26 @@
 /**
  * Cost Estimate Line Items API Endpoint
  * Handles CRUD operations for line items within estimates
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { costEstimateLineItems, costEstimates } from '../../../lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const GET: APIRoute = async ({ request, url }) => {
+// Helper to get projectId from estimate
+async function getProjectIdFromEstimate(estimateId: number): Promise<number | null> {
+  const [est] = await db
+    .select({ projectId: costEstimates.projectId })
+    .from(costEstimates)
+    .where(eq(costEstimates.id, estimateId));
+  return est?.projectId || null;
+}
+
+export const GET: APIRoute = async (context) => {
   try {
+    const { url } = context;
     const estimateId = url.searchParams.get('estimateId');
 
     if (!estimateId) {
@@ -16,6 +28,21 @@ export const GET: APIRoute = async ({ request, url }) => {
         JSON.stringify({ success: false, error: 'Estimate ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from estimate for RBAC check
+    const projectId = await getProjectIdFromEstimate(parseInt(estimateId));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Estimate not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Fetch all line items for the estimate
@@ -55,8 +82,9 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const body = await request.json();
 
     const {
@@ -82,6 +110,21 @@ export const POST: APIRoute = async ({ request }) => {
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from estimate for RBAC check
+    const projectId = await getProjectIdFromEstimate(parseInt(costEstimateId));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Estimate not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Calculate total cost
@@ -136,8 +179,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const body = await request.json();
     const { id, costEstimateId, ...updateData } = body;
 
@@ -148,15 +192,38 @@ export const PUT: APIRoute = async ({ request }) => {
       );
     }
 
+    // Get the line item to find the estimate and project
+    const [existingItem] = await db
+      .select()
+      .from(costEstimateLineItems)
+      .where(eq(costEstimateLineItems.id, parseInt(id)));
+
+    if (!existingItem) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Line item not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get projectId from estimate for RBAC check
+    const projectId = await getProjectIdFromEstimate(existingItem.costEstimateId);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Estimate not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
     // Recalculate total cost if any cost fields changed
     if (updateData.quantity !== undefined || updateData.unitCost !== undefined ||
         updateData.laborCost !== undefined || updateData.materialCost !== undefined ||
         updateData.equipmentCost !== undefined || updateData.subcontractorCost !== undefined) {
-
-      const [existingItem] = await db
-        .select()
-        .from(costEstimateLineItems)
-        .where(eq(costEstimateLineItems.id, parseInt(id)));
 
       const quantity = updateData.quantity !== undefined ? updateData.quantity : existingItem.quantity;
       const unitCost = updateData.unitCost !== undefined ? updateData.unitCost : existingItem.unitCost;
@@ -181,13 +248,6 @@ export const PUT: APIRoute = async ({ request }) => {
       .where(eq(costEstimateLineItems.id, parseInt(id)))
       .returning();
 
-    if (!updatedLineItem) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Line item not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Recalculate estimate totals
     await recalculateEstimate(updatedLineItem.costEstimateId);
 
@@ -211,8 +271,9 @@ export const PUT: APIRoute = async ({ request }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ request, url }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
+    const { url } = context;
     const id = url.searchParams.get('id');
 
     if (!id) {
@@ -233,6 +294,21 @@ export const DELETE: APIRoute = async ({ request, url }) => {
         JSON.stringify({ success: false, error: 'Line item not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from estimate for RBAC check
+    const projectId = await getProjectIdFromEstimate(lineItem.costEstimateId);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Estimate not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project delete access
+    const rbacResult = await checkRBAC(context, projectId, 'canDelete');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Delete the line item

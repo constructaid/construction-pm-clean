@@ -1,14 +1,17 @@
 /**
  * Bid Packages API - List and Create
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { bidPackages, costEstimates } from '../../../lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
 // GET - List all bid packages for a project
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { url } = context;
     const projectId = url.searchParams.get('projectId');
 
     if (!projectId) {
@@ -16,6 +19,12 @@ export const GET: APIRoute = async ({ url }) => {
         JSON.stringify({ success: false, error: 'Project ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, parseInt(projectId), 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     const packages = await db
@@ -38,8 +47,9 @@ export const GET: APIRoute = async ({ url }) => {
 };
 
 // POST - Create a new bid package
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const data = await request.json();
     const {
       projectId,
@@ -58,7 +68,6 @@ export const POST: APIRoute = async ({ request }) => {
       bidDueDate,
       estimatedContractValue,
       projectDuration,
-      createdBy,
     } = data;
 
     // Validation
@@ -71,6 +80,14 @@ export const POST: APIRoute = async ({ request }) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, parseInt(projectId), 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const { user } = rbacResult;
 
     // Insert bid package
     const [newPackage] = await db
@@ -92,7 +109,7 @@ export const POST: APIRoute = async ({ request }) => {
         bidDueDate: new Date(bidDueDate),
         estimatedContractValue: estimatedContractValue || null,
         projectDuration: projectDuration || null,
-        createdBy: createdBy || null, // Set to null if no user session
+        createdBy: user.id, // Use authenticated user ID
       })
       .returning();
 

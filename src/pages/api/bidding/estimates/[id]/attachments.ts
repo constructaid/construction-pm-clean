@@ -1,18 +1,30 @@
 /**
  * Estimate Attachments API
  * Upload, list, and delete attachments for cost estimates
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../../../lib/db';
-import { fileAttachments } from '../../../../../lib/db/schema';
+import { fileAttachments, costEstimates } from '../../../../../lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { checkRBAC } from '../../../../../lib/middleware/rbac';
+
+// Helper to get projectId from estimate
+async function getProjectIdFromEstimate(estimateId: number): Promise<number | null> {
+  const [est] = await db
+    .select({ projectId: costEstimates.projectId })
+    .from(costEstimates)
+    .where(eq(costEstimates.id, estimateId));
+  return est?.projectId || null;
+}
 
 // GET - List all attachments for an estimate
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -20,6 +32,21 @@ export const GET: APIRoute = async ({ params }) => {
         JSON.stringify({ success: false, error: 'Estimate ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from estimate for RBAC check
+    const projectId = await getProjectIdFromEstimate(parseInt(id));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Estimate not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     const attachments = await db
@@ -47,8 +74,9 @@ export const GET: APIRoute = async ({ params }) => {
 };
 
 // POST - Upload a new attachment
-export const POST: APIRoute = async ({ request, params }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request, params } = context;
     const { id } = params;
 
     if (!id) {
@@ -58,23 +86,31 @@ export const POST: APIRoute = async ({ request, params }) => {
       );
     }
 
+    // Get projectId from estimate for RBAC check
+    const projectId = await getProjectIdFromEstimate(parseInt(id));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Estimate not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const { user } = rbacResult;
+
     // Get form data
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const projectId = formData.get('projectId');
     const description = formData.get('description') as string;
-    const userId = formData.get('userId');
 
     if (!file) {
       return new Response(
         JSON.stringify({ success: false, error: 'No file provided' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!projectId || !userId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Project ID and User ID are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -95,12 +131,12 @@ export const POST: APIRoute = async ({ request, params }) => {
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
 
-    // Save to database
+    // Save to database - use authenticated user ID
     const fileUrl = `/uploads/estimates/${id}/${fileName}`;
     const [attachment] = await db
       .insert(fileAttachments)
       .values({
-        projectId: parseInt(projectId as string),
+        projectId: projectId,
         fileName: fileName,
         originalName: file.name,
         fileSize: file.size,
@@ -110,7 +146,7 @@ export const POST: APIRoute = async ({ request, params }) => {
         relatedEntity: 'cost_estimate',
         relatedEntityId: parseInt(id),
         description: description || null,
-        uploadedBy: parseInt(userId as string),
+        uploadedBy: user.id, // Use authenticated user ID
         tags: [],
       })
       .returning();
@@ -132,8 +168,9 @@ export const POST: APIRoute = async ({ request, params }) => {
 };
 
 // DELETE - Delete an attachment
-export const DELETE: APIRoute = async ({ request, params }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
+    const { request, params } = context;
     const { id } = params;
     const { attachmentId } = await request.json();
 
@@ -142,6 +179,21 @@ export const DELETE: APIRoute = async ({ request, params }) => {
         JSON.stringify({ success: false, error: 'Estimate ID and Attachment ID are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from estimate for RBAC check
+    const projectId = await getProjectIdFromEstimate(parseInt(id));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Estimate not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project delete access
+    const rbacResult = await checkRBAC(context, projectId, 'canDelete');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Get attachment info

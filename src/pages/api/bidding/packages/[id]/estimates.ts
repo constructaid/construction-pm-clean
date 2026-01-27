@@ -1,14 +1,26 @@
 /**
  * Bid Package Estimates API - Link/unlink estimates to bid packages
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../../../lib/db';
-import { costEstimates } from '../../../../../lib/db/schema';
+import { costEstimates, bidPackages } from '../../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRBAC } from '../../../../../lib/middleware/rbac';
+
+// Helper to get projectId from bid package
+async function getProjectIdFromBidPackage(bidPackageId: number): Promise<number | null> {
+  const [pkg] = await db
+    .select({ projectId: bidPackages.projectId })
+    .from(bidPackages)
+    .where(eq(bidPackages.id, bidPackageId));
+  return pkg?.projectId || null;
+}
 
 // POST - Link an estimate to a bid package
-export const POST: APIRoute = async ({ params, request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { params, request } = context;
     const { id } = params; // bid package ID
     const { estimateId } = await request.json();
 
@@ -17,6 +29,21 @@ export const POST: APIRoute = async ({ params, request }) => {
         JSON.stringify({ success: false, error: 'Bid package ID and estimate ID are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from bid package for RBAC check
+    const projectId = await getProjectIdFromBidPackage(parseInt(id));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Update estimate to link it to bid package
@@ -43,8 +70,9 @@ export const POST: APIRoute = async ({ params, request }) => {
 };
 
 // DELETE - Unlink an estimate from a bid package
-export const DELETE: APIRoute = async ({ params, request }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
+    const { params, request } = context;
     const { id } = params; // bid package ID
     const { estimateId } = await request.json();
 
@@ -53,6 +81,21 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         JSON.stringify({ success: false, error: 'Bid package ID and estimate ID are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get projectId from bid package for RBAC check
+    const projectId = await getProjectIdFromBidPackage(parseInt(id));
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Update estimate to unlink it from bid package

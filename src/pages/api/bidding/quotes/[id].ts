@@ -1,14 +1,36 @@
 /**
  * Subcontractor Quote Detail API - Get, Update, Delete
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../../lib/db';
-import { subcontractorQuotes } from '../../../../lib/db/schema';
+import { subcontractorQuotes, costEstimates, bidPackages } from '../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRBAC } from '../../../../lib/middleware/rbac';
+
+// Helper to get projectId from quote via bid package or estimate
+async function getProjectIdFromQuote(quote: { bidPackageId: number | null; costEstimateId: number | null }): Promise<number | null> {
+  if (quote.bidPackageId) {
+    const [pkg] = await db
+      .select({ projectId: bidPackages.projectId })
+      .from(bidPackages)
+      .where(eq(bidPackages.id, quote.bidPackageId));
+    return pkg?.projectId || null;
+  }
+  if (quote.costEstimateId) {
+    const [est] = await db
+      .select({ projectId: costEstimates.projectId })
+      .from(costEstimates)
+      .where(eq(costEstimates.id, quote.costEstimateId));
+    return est?.projectId || null;
+  }
+  return null;
+}
 
 // GET - Get quote details
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -30,6 +52,21 @@ export const GET: APIRoute = async ({ params }) => {
       );
     }
 
+    // Get projectId for RBAC check
+    const projectId = await getProjectIdFromQuote(quote);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unable to determine project context' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
     return new Response(
       JSON.stringify({ success: true, quote }),
       {
@@ -47,8 +84,9 @@ export const GET: APIRoute = async ({ params }) => {
 };
 
 // PATCH - Update quote
-export const PATCH: APIRoute = async ({ params, request }) => {
+export const PATCH: APIRoute = async (context) => {
   try {
+    const { params, request } = context;
     const { id } = params;
     const data = await request.json();
 
@@ -57,6 +95,33 @@ export const PATCH: APIRoute = async ({ params, request }) => {
         JSON.stringify({ success: false, error: 'Quote ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get quote to find projectId for RBAC check
+    const [existingQuote] = await db
+      .select()
+      .from(subcontractorQuotes)
+      .where(eq(subcontractorQuotes.id, parseInt(id)));
+
+    if (!existingQuote) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Quote not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const projectId = await getProjectIdFromQuote(existingQuote);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unable to determine project context' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Build update object
@@ -97,8 +162,9 @@ export const PATCH: APIRoute = async ({ params, request }) => {
 };
 
 // DELETE - Delete quote
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -106,6 +172,33 @@ export const DELETE: APIRoute = async ({ params }) => {
         JSON.stringify({ success: false, error: 'Quote ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get quote to find projectId for RBAC check
+    const [existingQuote] = await db
+      .select()
+      .from(subcontractorQuotes)
+      .where(eq(subcontractorQuotes.id, parseInt(id)));
+
+    if (!existingQuote) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Quote not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const projectId = await getProjectIdFromQuote(existingQuote);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unable to determine project context' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project delete access
+    const rbacResult = await checkRBAC(context, projectId, 'canDelete');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     await db.delete(subcontractorQuotes).where(eq(subcontractorQuotes.id, parseInt(id)));

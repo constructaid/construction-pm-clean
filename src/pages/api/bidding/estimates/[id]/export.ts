@@ -1,16 +1,19 @@
 /**
  * Estimate Export API Endpoint
  * Exports estimates to Excel or PDF format
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../../../lib/db';
 import { costEstimates, costEstimateLineItems } from '../../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRBAC } from '../../../../../lib/middleware/rbac';
 import * as XLSX from 'xlsx';
 import PDFDocument from 'pdfkit';
 
-export const GET: APIRoute = async ({ params, url }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { params, url } = context;
     const { id } = params;
     const format = url.searchParams.get('format') || 'excel';
 
@@ -32,6 +35,12 @@ export const GET: APIRoute = async ({ params, url }) => {
         JSON.stringify({ success: false, error: 'Estimate not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, estimate.projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Fetch line items

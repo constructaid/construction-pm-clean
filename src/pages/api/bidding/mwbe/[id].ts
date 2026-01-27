@@ -1,14 +1,26 @@
 /**
  * M/WBE Participation Detail API - Get, Update, Delete
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../../lib/db';
-import { mwbeParticipation } from '../../../../lib/db/schema';
+import { mwbeParticipation, bidPackages } from '../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { checkRBAC } from '../../../../lib/middleware/rbac';
+
+// Helper to get projectId from bid package
+async function getProjectIdFromBidPackage(bidPackageId: number): Promise<number | null> {
+  const [pkg] = await db
+    .select({ projectId: bidPackages.projectId })
+    .from(bidPackages)
+    .where(eq(bidPackages.id, bidPackageId));
+  return pkg?.projectId || null;
+}
 
 // GET - Get M/WBE participant details
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -30,6 +42,21 @@ export const GET: APIRoute = async ({ params }) => {
       );
     }
 
+    // Get projectId from bid package for RBAC check
+    const projectId = await getProjectIdFromBidPackage(participant.bidPackageId);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
     return new Response(
       JSON.stringify({ success: true, participant }),
       {
@@ -47,8 +74,9 @@ export const GET: APIRoute = async ({ params }) => {
 };
 
 // PATCH - Update M/WBE participant
-export const PATCH: APIRoute = async ({ params, request }) => {
+export const PATCH: APIRoute = async (context) => {
   try {
+    const { params, request } = context;
     const { id } = params;
     const data = await request.json();
 
@@ -57,6 +85,33 @@ export const PATCH: APIRoute = async ({ params, request }) => {
         JSON.stringify({ success: false, error: 'Participant ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get participant to find projectId for RBAC check
+    const [existingParticipant] = await db
+      .select()
+      .from(mwbeParticipation)
+      .where(eq(mwbeParticipation.id, parseInt(id)));
+
+    if (!existingParticipant) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Participant not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const projectId = await getProjectIdFromBidPackage(existingParticipant.bidPackageId);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Build update object
@@ -92,8 +147,9 @@ export const PATCH: APIRoute = async ({ params, request }) => {
 };
 
 // DELETE - Delete M/WBE participant
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
+    const { params } = context;
     const { id } = params;
 
     if (!id) {
@@ -101,6 +157,33 @@ export const DELETE: APIRoute = async ({ params }) => {
         JSON.stringify({ success: false, error: 'Participant ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get participant to find projectId for RBAC check
+    const [existingParticipant] = await db
+      .select()
+      .from(mwbeParticipation)
+      .where(eq(mwbeParticipation.id, parseInt(id)));
+
+    if (!existingParticipant) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Participant not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const projectId = await getProjectIdFromBidPackage(existingParticipant.bidPackageId);
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Bid package not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // RBAC: Require authentication and project delete access
+    const rbacResult = await checkRBAC(context, projectId, 'canDelete');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     await db.delete(mwbeParticipation).where(eq(mwbeParticipation.id, parseInt(id)));
