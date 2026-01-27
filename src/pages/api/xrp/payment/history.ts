@@ -6,11 +6,16 @@
 
 import type { APIRoute } from 'astro';
 import { getXRPLService } from '../../../../lib/services/xrp-service';
+import { requireAuth } from '../../../../lib/api/error-handler';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    // SECURITY: Require authentication for payment history
+    requireAuth(context);
+
+    const { url } = context;
     const address = url.searchParams.get('address');
     const limit = parseInt(url.searchParams.get('limit') || '20');
 

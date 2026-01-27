@@ -6,11 +6,13 @@
 
 import type { APIRoute } from 'astro';
 import { getXRPLService } from '../../../../lib/services/xrp-service';
+import { checkRBAC } from '../../../../lib/middleware/rbac';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const body = await request.json();
     const { projectId, fundTestnet = false } = body;
 
@@ -22,6 +24,13 @@ export const POST: APIRoute = async ({ request }) => {
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // SECURITY: Require authentication and canManageFinancials permission
+    // Wallet creation is a critical financial operation
+    const rbacResult = await checkRBAC(context, projectId, 'canManageFinancials');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     const xrplService = getXRPLService();

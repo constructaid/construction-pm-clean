@@ -7,13 +7,32 @@
 import type { APIRoute } from 'astro';
 import { getXRPLService } from '../../../../lib/services/xrp-service';
 import { Wallet } from 'xrpl';
+import { checkRBAC } from '../../../../lib/middleware/rbac';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const body = await request.json();
     const { fromSeed, toAddress, amount, memo, projectId, milestoneId } = body;
+
+    // SECURITY: Require authentication and canManageFinancials permission
+    // XRP payments are critical financial operations
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'projectId is required for XRP payment authorization',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const rbacResult = await checkRBAC(context, projectId, 'canManageFinancials');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
 
     // Validation
     if (!fromSeed || !toAddress || !amount) {
