@@ -34,6 +34,7 @@ import {
   sanitizeForAudit,
 } from '../../lib/api/audit-logger';
 import { createRequestLogger } from '../../lib/logger';
+import { verifyProjectAccess, getAccessibleProjectIds } from '../../lib/db/multi-tenancy';
 import { z } from 'zod';
 
 // ========================================
@@ -80,18 +81,16 @@ export const GET: APIRoute = apiHandler(async (context) => {
   // Build WHERE conditions array
   const conditions: any[] = [excludeDeleted()];
 
-  // Filter by archived status (default: exclude archived projects)
-  if (query.archived === 'true') {
-    conditions.push(eq(projects.isArchived, true));
-  } else if (query.archived === 'false') {
-    conditions.push(eq(projects.isArchived, false));
-  }
-  // If 'all', don't add any filter for isArchived
+  const user = context.locals.user!;
 
-  // Filter by user (owner, GC, creator, or team member)
-  // Use userId from query if provided, otherwise use authenticated user
-  const userId = query.userId || context.locals.user?.id;
-  if (userId) {
+  // MULTI-TENANCY: Filter by company if user has a companyId
+  // Users can only see projects belonging to their company
+  if (user.companyId) {
+    conditions.push(eq(projects.companyId, user.companyId));
+  } else {
+    // User without companyId can only see projects they're directly associated with
+    // (owner, GC, creator, or team member)
+    const userId = user.id;
     conditions.push(
       or(
         eq(projects.ownerId, userId),
@@ -101,6 +100,14 @@ export const GET: APIRoute = apiHandler(async (context) => {
       )
     );
   }
+
+  // Filter by archived status (default: exclude archived projects)
+  if (query.archived === 'true') {
+    conditions.push(eq(projects.isArchived, true));
+  } else if (query.archived === 'false') {
+    conditions.push(eq(projects.isArchived, false));
+  }
+  // If 'all', don't add any filter for isArchived
 
   // Add status filter if provided
   if (query.status && query.status !== 'all') {
@@ -219,11 +226,13 @@ export const POST: APIRoute = apiHandler(async (context) => {
   }
 
   // Create new project with validated data
+  // MULTI-TENANCY: Project inherits companyId from creating user
   const newProject = {
     name: data.name,
     description: data.description || null,
     status: data.status || 'planning',
     projectNumber: data.projectNumber,
+    companyId: user.companyId || null, // Multi-tenancy: associate with user's company
 
     // Location
     address: data.address || null,
@@ -245,7 +254,7 @@ export const POST: APIRoute = apiHandler(async (context) => {
 
     // Team
     ownerId: data.ownerId || null,
-    generalContractorId: data.generalContractorId || null,
+    generalContractorId: data.generalContractorId || user.id, // Default to creating user
     teamMembers: [],
 
     // Progress
@@ -256,7 +265,7 @@ export const POST: APIRoute = apiHandler(async (context) => {
     // Metadata
     tags: [],
     settings: {},
-    createdBy: data.generalContractorId || null,
+    createdBy: user.id, // Use authenticated user's ID
   };
 
   // Insert project

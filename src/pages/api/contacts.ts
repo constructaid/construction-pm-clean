@@ -17,10 +17,14 @@ import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { contacts, divisionContacts } from '../../lib/db/contacts-schema';
 import {
   apiHandler,
+  requireAuth,
   validateBody,
   validateQuery,
   checkRateLimit,
+  UnauthorizedError,
 } from '../../lib/api/error-handler';
+import { checkRBAC } from '../../lib/middleware/rbac';
+import { getAccessibleProjectIds } from '../../lib/db/multi-tenancy';
 import {
   createContactSchema,
   paginationSchema,
@@ -49,8 +53,21 @@ const contactsQuerySchema = paginationSchema.extend({
 });
 
 export const GET: APIRoute = apiHandler(async (context) => {
+  // Require authentication
+  requireAuth(context);
+
   // Validate query parameters
   const query = validateQuery(context, contactsQuerySchema);
+
+  const user = context.locals.user!;
+
+  // RBAC Check - if projectId provided, verify access to that project
+  if (query.projectId) {
+    const rbacResult = await checkRBAC(context, query.projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+  }
 
   // Rate limiting (200 requests per minute)
   const rateLimitKey = `contacts-list-${context.clientAddress}`;
@@ -61,9 +78,29 @@ export const GET: APIRoute = apiHandler(async (context) => {
   // Build WHERE conditions
   const conditions = [excludeDeleted()];
 
-  // Project filter
+  // MULTI-TENANCY: Filter contacts by accessible projects
   if (query.projectId) {
+    // Already verified access above
     conditions.push(eq(contacts.projectId, query.projectId));
+  } else {
+    // No specific project - limit to user's accessible projects
+    const accessibleProjectIds = await getAccessibleProjectIds(user.id, user.companyId);
+    if (accessibleProjectIds.length > 0) {
+      conditions.push(inArray(contacts.projectId, accessibleProjectIds));
+    } else {
+      // User has no project access - return empty
+      return {
+        contacts: [],
+        pagination: {
+          page: query.page,
+          limit: query.limit,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      };
+    }
   }
 
   // Contact type filter
@@ -162,10 +199,17 @@ export const POST: APIRoute = apiHandler(async (context) => {
   // Validate request body
   const data = await validateBody(context, createContactSchema);
 
+  // RBAC Check - requires canWrite permission for the project
+  const rbacResult = await checkRBAC(context, data.projectId, 'canWrite');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
   // Rate limiting (50 creates per minute)
   const rateLimitKey = `contact-create-${context.clientAddress}`;
   checkRateLimit(rateLimitKey, 50, 60000);
 
+  const user = context.locals.user!;
   console.log('POST /api/contacts - Creating contact:', data.company);
 
   // Auto-generate fullName if not provided
@@ -212,7 +256,7 @@ export const POST: APIRoute = apiHandler(async (context) => {
     notes: data.notes || null,
     tags: data.tags || null,
     lastContactDate: data.lastContactDate || null,
-    createdBy: data.createdBy || 1, // TODO: Replace with authenticated user ID
+    createdBy: user.id, // Use authenticated user ID
   };
 
   // Insert contact
@@ -256,7 +300,6 @@ export const POST: APIRoute = apiHandler(async (context) => {
   }
 
   // Log the creation to audit log using authenticated user
-  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
     id: user.id,
     email: user.email,

@@ -19,7 +19,9 @@ import {
   validateBody,
   validateQuery,
   checkRateLimit,
+  UnauthorizedError,
 } from '../../lib/api/error-handler';
+import { checkRBAC } from '../../lib/middleware/rbac';
 import {
   createDailyReportSchema,
   paginationSchema,
@@ -51,6 +53,16 @@ const dailyReportsQuerySchema = paginationSchema.extend({
 export const GET: APIRoute = apiHandler(async (context) => {
   // Validate query parameters
   const query = validateQuery(context, dailyReportsQuerySchema);
+
+  // RBAC Check - projectId is required for daily reports
+  if (!query.projectId) {
+    throw new UnauthorizedError('projectId is required to fetch daily reports');
+  }
+
+  const rbacResult = await checkRBAC(context, query.projectId, 'canRead');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
 
   // Rate limiting (200 requests per minute)
   const rateLimitKey = `daily-reports-list-${context.clientAddress}`;
@@ -135,10 +147,17 @@ export const POST: APIRoute = apiHandler(async (context) => {
   // Validate request body
   const data = await validateBody(context, createDailyReportSchema);
 
+  // RBAC Check - requires canWrite permission for daily reports
+  const rbacResult = await checkRBAC(context, data.projectId, 'canWrite');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
   // Rate limiting (50 creates per minute)
   const rateLimitKey = `daily-report-create-${context.clientAddress}`;
   checkRateLimit(rateLimitKey, 50, 60000);
 
+  const user = context.locals.user!;
   console.log('POST /api/daily-reports - Creating daily report for project:', data.projectId);
 
   // Create new daily report with validated data
@@ -151,7 +170,7 @@ export const POST: APIRoute = apiHandler(async (context) => {
     workPerformed: data.workPerformed,
     issues: data.issues || null,
     safetyNotes: data.safetyNotes || null,
-    submittedBy: 1, // TODO: Replace with authenticated user ID
+    submittedBy: user.id, // Use authenticated user ID
   };
 
   // Insert daily report
@@ -160,7 +179,6 @@ export const POST: APIRoute = apiHandler(async (context) => {
   console.log('Daily report created successfully:', result.id);
 
   // Log the creation to audit log using authenticated user
-  const user = context.locals.user!;
   const auditContext = createAuditContext(context, {
     id: user.id,
     email: user.email,

@@ -9,6 +9,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { verifyAccessToken } from './lib/auth/jwt';
 import { logger } from './lib/logger';
+import { validateCSRFMiddleware, setCSRFCookie, CSRF_COOKIE_NAME } from './lib/auth/csrf';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const endpoint = context.url.pathname;
@@ -85,6 +86,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
       });
     }
     context.locals.user = undefined;
+  }
+
+  // CSRF Protection for state-changing API requests
+  // Only applies to authenticated users making browser requests (not API token auth)
+  if (endpoint.startsWith('/api/') && context.locals.user) {
+    const csrfError = validateCSRFMiddleware(context);
+    if (csrfError) {
+      return csrfError;
+    }
+  }
+
+  // Ensure CSRF cookie is set for authenticated users
+  // This allows the client to include the token in subsequent requests
+  if (context.locals.user && !context.cookies.get(CSRF_COOKIE_NAME)?.value) {
+    setCSRFCookie(context);
   }
 
   // Continue to the route handler

@@ -62,7 +62,8 @@ export const users = pgTable('users', {
   lastName: varchar('last_name', { length: 100 }).notNull(),
   role: userRoleEnum('role').notNull(),
   status: userStatusEnum('status').default('PENDING_VERIFICATION').notNull(),
-  company: varchar('company', { length: 255 }),
+  companyId: integer('company_id').references(() => companies.id), // Multi-tenancy support
+  company: varchar('company', { length: 255 }), // Legacy company name field
   phone: varchar('phone', { length: 50 }),
   avatar: text('avatar'),
   emailVerified: boolean('email_verified').default(false),
@@ -74,6 +75,7 @@ export const users = pgTable('users', {
 // Projects Table
 export const projects = pgTable('projects', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id), // Multi-tenancy: isolate by company
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   status: projectStatusEnum('status').default('planning').notNull(),
@@ -1421,6 +1423,44 @@ export const auditLog = pgTable('audit_log', {
 
 // ========================================
 // END AUDIT LOG
+// ========================================
+
+// ========================================
+// SESSION MANAGEMENT - Persistent Sessions
+// ========================================
+
+// Sessions Table - Persistent session storage for authentication
+export const sessions = pgTable('sessions', {
+  id: text('id').primaryKey(), // Session ID (UUID)
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Token data
+  refreshToken: text('refresh_token').notNull(),
+
+  // Session metadata
+  expiresAt: timestamp('expires_at').notNull(),
+  lastActivity: timestamp('last_activity').notNull(),
+
+  // Security tracking
+  ipAddress: varchar('ip_address', { length: 45 }), // IPv6 compatible
+  userAgent: text('user_agent'),
+
+  // Device identification
+  deviceFingerprint: varchar('device_fingerprint', { length: 255 }),
+
+  // Session state
+  isRevoked: boolean('is_revoked').default(false),
+  revokedAt: timestamp('revoked_at'),
+  revokedReason: varchar('revoked_reason', { length: 255 }),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
+
+// ========================================
+// END SESSION MANAGEMENT
 // ========================================
 
 // Type exports for TypeScript
