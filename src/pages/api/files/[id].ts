@@ -2,6 +2,7 @@
  * Single File API Endpoint
  * GET /api/files/[id]/download - Download a file
  * DELETE /api/files/[id] - Delete a file
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db, fileAttachments } from '../../../lib/db';
@@ -10,9 +11,11 @@ import { logFileDelete } from '../../../lib/activityLogger';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const DELETE: APIRoute = async ({ params, locals }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
+    const { params, locals } = context;
     const { id } = params;
 
     if (!id) {
@@ -45,6 +48,14 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     const file = files[0];
 
+    // RBAC: Require authentication and project delete access
+    const rbacResult = await checkRBAC(context, file.projectId, 'canDelete');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const { user } = rbacResult;
+
     // Delete from database
     await db.delete(fileAttachments).where(eq(fileAttachments.id, fileId));
 
@@ -55,13 +66,12 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     }
 
     // Log activity using authenticated user
-    const user = locals.user;
     await logFileDelete({
       projectId: file.projectId,
       fileId: file.id,
       fileName: file.originalName,
-      userId: user?.id || 1,
-      userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Unknown User'
+      userId: user.id,
+      userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
     });
 
     return new Response(

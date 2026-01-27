@@ -1,13 +1,16 @@
 /**
  * Files API Endpoint
  * GET /api/files - List files for a project
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { db, fileAttachments } from '../../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { url } = context;
     const projectId = url.searchParams.get('projectId');
     const folderType = url.searchParams.get('folderType');
     const relatedEntity = url.searchParams.get('relatedEntity');
@@ -21,6 +24,12 @@ export const GET: APIRoute = async ({ url }) => {
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, parseInt(projectId), 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Build query

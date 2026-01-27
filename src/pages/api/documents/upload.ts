@@ -2,6 +2,7 @@
  * Document Upload API Endpoint
  * Handles file uploads for project documents
  * POST /api/documents/upload
+ * SECURED with RBAC middleware
  *
  * Note: This is a simplified version for local development.
  * In production, integrate with AWS S3 or similar cloud storage.
@@ -12,9 +13,11 @@ import { FolderType, DocumentStatus } from '../../../lib/db/schemas/Document';
 import formidable from 'formidable';
 import fs from 'fs/promises';
 import path from 'path';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     // Parse multipart form data
     const form = formidable({
       maxFileSize: 50 * 1024 * 1024, // 50MB
@@ -46,6 +49,14 @@ export const POST: APIRoute = async ({ request }) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, parseInt(projectId), 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const { user } = rbacResult;
 
     // Validate folder type
     if (!Object.values(FolderType).includes(folderType as FolderType)) {
@@ -110,8 +121,8 @@ export const POST: APIRoute = async ({ request }) => {
       version: 1,
       hasMarkups: false,
       tags: [],
-      uploadedBy: 'temp-user-id', // TODO: Get from session
-      visibleToRoles: ['GC', 'OWNER', 'ARCHITECT'], // TODO: Set based on folder type
+      uploadedBy: user.id.toString(), // Use authenticated user ID
+      visibleToRoles: ['GC', 'OWNER', 'ARCHITECT'],
       createdAt: new Date(),
       updatedAt: new Date()
     };

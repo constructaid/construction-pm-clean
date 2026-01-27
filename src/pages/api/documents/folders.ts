@@ -2,13 +2,16 @@
  * Document Folders API Endpoint
  * Returns statistics for each folder type
  * GET /api/documents/folders?projectId=xxx
+ * SECURED with RBAC middleware
  */
 import type { APIRoute } from 'astro';
 import { connectToDatabase } from '../../../lib/db/mongodb';
 import { FolderType } from '../../../lib/db/schemas/Document';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const url = new URL(request.url);
     const projectId = url.searchParams.get('projectId');
 
@@ -20,6 +23,12 @@ export const GET: APIRoute = async ({ request }) => {
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, parseInt(projectId), 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Connect to database

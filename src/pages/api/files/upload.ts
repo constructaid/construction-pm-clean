@@ -1,6 +1,7 @@
 /**
  * File Upload API Endpoint
  * POST /api/files/upload - Upload files with metadata
+ * SECURED with RBAC middleware
  *
  * Note: This is a simplified version for development
  * In production, you would upload to S3/cloud storage
@@ -11,9 +12,11 @@ import { logFileUpload } from '../../../lib/activityLogger';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const formData = await request.formData();
 
     const file = formData.get('file') as File;
@@ -34,6 +37,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const { user } = rbacResult;
 
     // Create uploads directory if it doesn't exist
     const uploadsDir = join(process.cwd(), 'public', 'uploads', projectId.toString(), folderType);
@@ -66,20 +77,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       description,
       relatedEntity,
       relatedEntityId,
-      uploadedBy: 1, // Mock user ID
+      uploadedBy: user.id, // Use authenticated user ID
     }).returning();
 
     const uploadedFile = result[0];
 
     // Log activity using authenticated user
-    const user = locals.user;
     await logFileUpload({
       projectId,
       fileId: uploadedFile.id,
       fileName: file.name,
       folderType,
-      userId: user?.id || 1,
-      userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Unknown User'
+      userId: user.id,
+      userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
     });
 
     return new Response(
