@@ -2,6 +2,8 @@
  * Client/Owner Dashboard Component
  * High-level oversight dashboard for owners/clients
  * Focus: Financial control, approvals, project status, key milestones
+ *
+ * Uses real API data from /api/portfolio endpoint
  */
 
 import { createSignal, onMount, Show, For } from 'solid-js';
@@ -48,60 +50,13 @@ interface MilestoneSummary {
 
 export default function ClientDashboard(props: ClientDashboardProps) {
   const [loading, setLoading] = createSignal(false);
+  const [error, setError] = createSignal<string | null>(null);
   const [projectOverview, setProjectOverview] = createSignal<ProjectOverview[]>([]);
   const [paymentSummary, setPaymentSummary] = createSignal<PaymentSummary | null>(null);
   const [changeOrders, setChangeOrders] = createSignal<ChangeOrderSummary | null>(null);
   const [milestones, setMilestones] = createSignal<MilestoneSummary | null>(null);
   const [rfiCount, setRfiCount] = createSignal(0);
-
-  // Mock data for now
-  const mockProjectOverview: ProjectOverview[] = [
-    {
-      id: 1,
-      name: 'Downtown Office Complex',
-      status: 'In Progress',
-      completionPercentage: 65,
-      contractValue: 2500000,
-      spentToDate: 1625000,
-      remainingBudget: 875000,
-      expectedCompletion: '2025-06-30',
-    },
-    {
-      id: 2,
-      name: 'Residential Tower Phase 2',
-      status: 'In Progress',
-      completionPercentage: 42,
-      contractValue: 5800000,
-      spentToDate: 2436000,
-      remainingBudget: 3364000,
-      expectedCompletion: '2025-12-15',
-    },
-  ];
-
-  const mockPaymentSummary: PaymentSummary = {
-    totalApproved: 4061000,
-    totalPaid: 3825000,
-    pendingApproval: 236000,
-    nextPaymentDue: '2025-02-15',
-    outstandingAmount: 236000,
-  };
-
-  const mockChangeOrders: ChangeOrderSummary = {
-    pendingApprovalCount: 3,
-    pendingAmount: 127500,
-    approvedThisMonth: 2,
-    totalImpact: 245000,
-  };
-
-  const mockMilestones: MilestoneSummary = {
-    upcomingMilestones: [
-      { name: 'Foundation Completion', date: '2025-02-10', status: 'on-track' },
-      { name: 'MEP Rough-In', date: '2025-03-15', status: 'on-track' },
-      { name: 'Building Envelope', date: '2025-04-20', status: 'at-risk' },
-    ],
-    criticalPath: false,
-    daysAhead: 3,
-  };
+  const [firstProjectId, setFirstProjectId] = createSignal<number | null>(null);
 
   onMount(() => {
     loadDashboardData();
@@ -109,15 +64,120 @@ export default function ClientDashboard(props: ClientDashboardProps) {
 
   const loadDashboardData = async () => {
     setLoading(true);
-    // TODO: Replace with actual API calls
-    setTimeout(() => {
-      setProjectOverview(mockProjectOverview);
-      setPaymentSummary(mockPaymentSummary);
-      setChangeOrders(mockChangeOrders);
-      setMilestones(mockMilestones);
-      setRfiCount(5);
+    setError(null);
+
+    try {
+      // Fetch portfolio data from real API
+      const portfolioRes = await fetch('/api/portfolio');
+      if (!portfolioRes.ok) {
+        throw new Error('Failed to fetch portfolio data');
+      }
+      const portfolioData = await portfolioRes.json();
+
+      // Transform projects to our interface
+      const projects: ProjectOverview[] = (portfolioData.projects || []).map((p: any) => ({
+        id: p.id,
+        name: p.name || 'Untitled Project',
+        status: p.status === 'active' ? 'In Progress' :
+                p.status === 'completed' ? 'Completed' :
+                p.status === 'planning' ? 'Planning' :
+                p.status === 'on_hold' ? 'On Hold' : p.status,
+        completionPercentage: p.progressPercentage || 0,
+        contractValue: p.totalBudget || 0,
+        spentToDate: p.spentBudget || 0,
+        remainingBudget: p.remainingBudget || (p.totalBudget - p.spentBudget) || 0,
+        expectedCompletion: p.estimatedCompletion || p.endDate || '',
+      }));
+
+      setProjectOverview(projects);
+
+      // Set first project ID for navigation links
+      if (projects.length > 0) {
+        setFirstProjectId(projects[0].id);
+      }
+
+      // Calculate payment summary from KPIs
+      const kpis = portfolioData.kpis || {};
+      const costKpis = kpis.cost || {};
+      setPaymentSummary({
+        totalApproved: costKpis.totalSpent || 0,
+        totalPaid: costKpis.totalSpent || 0,
+        pendingApproval: (costKpis.totalBudget || 0) - (costKpis.totalSpent || 0),
+        nextPaymentDue: getNextPaymentDate(),
+        outstandingAmount: (costKpis.totalBudget || 0) - (costKpis.totalSpent || 0),
+      });
+
+      // Process change orders from real data
+      const changeOrdersList = portfolioData.changeOrders || [];
+      const pendingCOs = changeOrdersList.filter((co: any) => co.status === 'pending');
+      const approvedThisMonth = changeOrdersList.filter((co: any) => {
+        const approvedDate = co.approvedDate ? new Date(co.approvedDate) : null;
+        const now = new Date();
+        return co.status === 'approved' && approvedDate &&
+               approvedDate.getMonth() === now.getMonth() &&
+               approvedDate.getFullYear() === now.getFullYear();
+      });
+
+      setChangeOrders({
+        pendingApprovalCount: pendingCOs.length,
+        pendingAmount: pendingCOs.reduce((sum: number, co: any) => sum + (co.amount || 0), 0),
+        approvedThisMonth: approvedThisMonth.length,
+        totalImpact: changeOrdersList.reduce((sum: number, co: any) => sum + (co.amount || 0), 0),
+      });
+
+      // Process RFIs
+      const rfisList = portfolioData.rfis || [];
+      const openRfis = rfisList.filter((rfi: any) =>
+        rfi.status === 'open' || rfi.status === 'pending_response'
+      );
+      setRfiCount(openRfis.length);
+
+      // Build milestones from tasks data
+      const tasksList = portfolioData.tasks || [];
+      const upcomingTasks = tasksList
+        .filter((t: any) => t.status !== 'completed' && t.dueDate)
+        .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        .slice(0, 3)
+        .map((t: any) => ({
+          name: t.title || t.name || 'Untitled Task',
+          date: t.dueDate,
+          status: getTaskStatus(t),
+        }));
+
+      const timeKpis = kpis.time || {};
+      setMilestones({
+        upcomingMilestones: upcomingTasks.length > 0 ? upcomingTasks : [
+          { name: 'No upcoming milestones', date: '', status: 'on-track' }
+        ],
+        criticalPath: (timeKpis.behindSchedule || 0) > 0,
+        daysAhead: (timeKpis.aheadOfSchedule || 0) - (timeKpis.behindSchedule || 0),
+      });
+
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  // Helper to determine task status based on due date
+  const getTaskStatus = (task: any): string => {
+    if (!task.dueDate) return 'on-track';
+    const dueDate = new Date(task.dueDate);
+    const now = new Date();
+    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilDue < 0) return 'delayed';
+    if (daysUntilDue <= 7) return 'at-risk';
+    return 'on-track';
+  };
+
+  // Helper to get next payment date (end of current month)
+  const getNextPaymentDate = (): string => {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return lastDay.toISOString().split('T')[0];
   };
 
   const formatCurrency = (amount: number) => {
@@ -130,6 +190,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'TBD';
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -147,8 +208,43 @@ export default function ClientDashboard(props: ClientDashboardProps) {
     return colors[status.toLowerCase()] || 'bg-gray-100 text-gray-800';
   };
 
+  // Get the link target project ID (use first project or fallback to 1)
+  const getProjectLink = (path: string) => {
+    const projectId = firstProjectId() || 1;
+    return `/projects/${projectId}/${path}`;
+  };
+
   return (
     <div class="min-h-screen bg-gray-50">
+      {/* Loading State */}
+      <Show when={loading()}>
+        <div class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-ca-teal mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </Show>
+
+      {/* Error State */}
+      <Show when={error()}>
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 m-4">
+          <div class="flex items-center">
+            <div class="text-red-500 text-2xl mr-3">⚠️</div>
+            <div>
+              <p class="text-red-700 font-medium">Error loading dashboard</p>
+              <p class="text-red-600 text-sm">{error()}</p>
+              <button
+                onClick={loadDashboardData}
+                class="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </Show>
+
       {/* Header */}
       <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-12 mb-8">
         <div class="max-w-7xl mx-auto">
@@ -185,69 +281,90 @@ export default function ClientDashboard(props: ClientDashboardProps) {
       </div>
 
       <div class="max-w-7xl mx-auto px-8 pb-12">
+        {/* Empty State */}
+        <Show when={!loading() && projectOverview().length === 0}>
+          <div class="bg-white rounded-lg shadow-lg p-12 text-center mb-8">
+            <div class="text-6xl mb-4">📊</div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">No Projects Yet</h3>
+            <p class="text-gray-600 mb-6">
+              You don't have any active projects. Contact your general contractor to get started.
+            </p>
+            <a
+              href="/projects"
+              class="px-6 py-3 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all font-medium"
+            >
+              View All Projects
+            </a>
+          </div>
+        </Show>
+
         {/* Project Overview Cards */}
-        <div class="mb-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-4">Project Portfolio</h2>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <For each={projectOverview()}>
-              {(project) => (
-                <div class="bg-white rounded-lg shadow-lg border-l-4 border-ca-teal overflow-hidden">
-                  <div class="p-6">
-                    <div class="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-1">{project.name}</h3>
-                        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
-                          {project.status}
-                        </span>
+        <Show when={projectOverview().length > 0}>
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Project Portfolio</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <For each={projectOverview()}>
+                {(project) => (
+                  <div class="bg-white rounded-lg shadow-lg border-l-4 border-ca-teal overflow-hidden">
+                    <div class="p-6">
+                      <div class="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 class="text-xl font-bold text-gray-900 mb-1">{project.name}</h3>
+                          <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                            {project.status}
+                          </span>
+                        </div>
+                        <a
+                          href={`/projects/${project.id}`}
+                          class="px-4 py-2 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all text-sm font-medium"
+                        >
+                          View Details
+                        </a>
                       </div>
-                      <a
-                        href={`/projects/${project.id}/dashboard`}
-                        class="px-4 py-2 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all text-sm font-medium"
-                      >
-                        View Details
-                      </a>
-                    </div>
 
-                    {/* Progress Bar */}
-                    <div class="mb-4">
-                      <div class="flex items-center justify-between text-sm mb-2">
-                        <span class="font-medium text-gray-700">Progress</span>
-                        <span class="font-bold text-ca-teal">{project.completionPercentage}%</span>
+                      {/* Progress Bar */}
+                      <div class="mb-4">
+                        <div class="flex items-center justify-between text-sm mb-2">
+                          <span class="font-medium text-gray-700">Progress</span>
+                          <span class="font-bold text-ca-teal">{project.completionPercentage}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                          <div
+                            class="bg-gradient-to-r from-ca-teal to-blue-600 h-3 rounded-full transition-all duration-500"
+                            style={`width: ${project.completionPercentage}%`}
+                          ></div>
+                        </div>
                       </div>
-                      <div class="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                          class="bg-gradient-to-r from-ca-teal to-blue-600 h-3 rounded-full transition-all duration-500"
-                          style={`width: ${project.completionPercentage}%`}
-                        ></div>
-                      </div>
-                    </div>
 
-                    {/* Financial Summary */}
-                    <div class="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-                      <div>
-                        <div class="text-xs text-gray-600 mb-1">Contract Value</div>
-                        <div class="font-bold text-gray-900">{formatCurrency(project.contractValue)}</div>
+                      {/* Financial Summary */}
+                      <div class="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+                        <div>
+                          <div class="text-xs text-gray-600 mb-1">Contract Value</div>
+                          <div class="font-bold text-gray-900">{formatCurrency(project.contractValue)}</div>
+                        </div>
+                        <div>
+                          <div class="text-xs text-gray-600 mb-1">Spent to Date</div>
+                          <div class="font-bold text-blue-600">{formatCurrency(project.spentToDate)}</div>
+                        </div>
+                        <div>
+                          <div class="text-xs text-gray-600 mb-1">Remaining</div>
+                          <div class="font-bold text-green-600">{formatCurrency(project.remainingBudget)}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div class="text-xs text-gray-600 mb-1">Spent to Date</div>
-                        <div class="font-bold text-blue-600">{formatCurrency(project.spentToDate)}</div>
-                      </div>
-                      <div>
-                        <div class="text-xs text-gray-600 mb-1">Remaining</div>
-                        <div class="font-bold text-green-600">{formatCurrency(project.remainingBudget)}</div>
-                      </div>
-                    </div>
 
-                    <div class="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
-                      <span class="font-medium">Expected Completion:</span>{' '}
-                      {formatDate(project.expectedCompletion)}
+                      <Show when={project.expectedCompletion}>
+                        <div class="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
+                          <span class="font-medium">Expected Completion:</span>{' '}
+                          {formatDate(project.expectedCompletion)}
+                        </div>
+                      </Show>
                     </div>
                   </div>
-                </div>
-              )}
-            </For>
+                )}
+              </For>
+            </div>
           </div>
-        </div>
+        </Show>
 
         {/* Payment Summary */}
         <div class="mb-8">
@@ -298,7 +415,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
                   </div>
                 </div>
                 <a
-                  href="/projects/1/payment-applications"
+                  href={getProjectLink('payment-applications')}
                   class="px-4 py-2 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all font-medium"
                 >
                   View Payment Applications
@@ -319,7 +436,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
                   <div>
                     <div class="font-semibold text-gray-900">Pending Your Approval</div>
                     <div class="text-sm text-gray-600 mt-1">
-                      {changeOrders()?.pendingApprovalCount} change orders
+                      {changeOrders()?.pendingApprovalCount || 0} change orders
                     </div>
                   </div>
                   <div class="text-right">
@@ -334,7 +451,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
                   <div class="p-4 bg-gray-50 rounded-lg">
                     <div class="text-sm text-gray-600 mb-1">Approved This Month</div>
                     <div class="text-xl font-bold text-green-600">
-                      {changeOrders()?.approvedThisMonth}
+                      {changeOrders()?.approvedThisMonth || 0}
                     </div>
                   </div>
                   <div class="p-4 bg-gray-50 rounded-lg">
@@ -346,7 +463,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
                 </div>
 
                 <a
-                  href="/projects/1/change-orders"
+                  href={getProjectLink('change-orders')}
                   class="block w-full text-center px-4 py-3 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all font-medium"
                 >
                   Review Change Orders
@@ -364,10 +481,14 @@ export default function ClientDashboard(props: ClientDashboardProps) {
                   <div>
                     <div class="font-semibold text-gray-900">Schedule Status</div>
                     <div class="text-sm text-gray-600">
-                      {milestones()?.daysAhead} days ahead of schedule
+                      {(milestones()?.daysAhead || 0) >= 0
+                        ? `${milestones()?.daysAhead || 0} days ahead of schedule`
+                        : `${Math.abs(milestones()?.daysAhead || 0)} days behind schedule`}
                     </div>
                   </div>
-                  <div class="text-3xl">✅</div>
+                  <div class="text-3xl">
+                    {(milestones()?.daysAhead || 0) >= 0 ? '✅' : '⚠️'}
+                  </div>
                 </div>
               </div>
 
@@ -378,7 +499,9 @@ export default function ClientDashboard(props: ClientDashboardProps) {
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div class="flex-1">
                         <div class="font-medium text-gray-900">{milestone.name}</div>
-                        <div class="text-sm text-gray-600">{formatDate(milestone.date)}</div>
+                        <Show when={milestone.date}>
+                          <div class="text-sm text-gray-600">{formatDate(milestone.date)}</div>
+                        </Show>
                       </div>
                       <span
                         class={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(
@@ -393,7 +516,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
               </div>
 
               <a
-                href="/projects/1/schedule"
+                href={getProjectLink('schedule')}
                 class="block w-full text-center px-4 py-3 bg-ca-teal text-white rounded-lg hover:opacity-90 transition-all font-medium mt-4"
               >
                 View Full Schedule
@@ -415,7 +538,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
                 </div>
               </div>
               <a
-                href="/projects/1/rfis"
+                href={getProjectLink('rfis')}
                 class="px-6 py-3 bg-ca-orange text-white rounded-lg hover:opacity-90 transition-all font-medium"
               >
                 Review RFIs
@@ -429,7 +552,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
           <h2 class="text-2xl font-bold text-gray-900 mb-4">Quick Access</h2>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <a
-              href="/projects/1/contracts"
+              href={getProjectLink('contracts')}
               class="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all border-2 border-gray-200 hover:border-ca-teal text-center"
             >
               <div class="text-4xl mb-2">📜</div>
@@ -437,7 +560,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
               <div class="text-xs text-gray-600 mt-1">Subcontract Agreements</div>
             </a>
             <a
-              href="/projects/1/documents"
+              href={getProjectLink('documents')}
               class="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all border-2 border-gray-200 hover:border-ca-teal text-center"
             >
               <div class="text-4xl mb-2">📁</div>
@@ -445,7 +568,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
               <div class="text-xs text-gray-600 mt-1">Drawings & Specs</div>
             </a>
             <a
-              href="/projects/1/submittals"
+              href={getProjectLink('submittals')}
               class="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all border-2 border-gray-200 hover:border-ca-teal text-center"
             >
               <div class="text-4xl mb-2">📝</div>
@@ -453,7 +576,7 @@ export default function ClientDashboard(props: ClientDashboardProps) {
               <div class="text-xs text-gray-600 mt-1">Material Approvals</div>
             </a>
             <a
-              href="/projects/1/xrp-payments"
+              href={getProjectLink('xrp-payments')}
               class="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all border-2 border-gray-200 hover:border-purple-500 text-center"
             >
               <div class="text-4xl mb-2">⚡</div>

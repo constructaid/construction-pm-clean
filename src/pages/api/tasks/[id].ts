@@ -185,18 +185,18 @@ export const DELETE: APIRoute = apiHandler(async (context) => {
     throw new NotFoundError('Task', params.id);
   }
 
-  // Soft delete the task
-  const userId = 1; // TODO: Get from authenticated user
+  // Soft delete the task using authenticated user
+  const user = context.locals.user!;
 
-  await db.execute(softDelete(tasks, params.id, userId));
+  await db.execute(softDelete(tasks, params.id, user.id));
 
   console.log('Task soft deleted:', params.id);
 
   // Log the delete to audit log
   const auditContext = createAuditContext(context, {
-    id: userId,
-    email: 'system@example.com', // TODO: Replace with actual user email
-    role: 'ADMIN', // TODO: Replace with actual user role
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   // Log audit (async, non-blocking)

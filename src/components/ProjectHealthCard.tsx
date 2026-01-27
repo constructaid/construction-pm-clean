@@ -6,6 +6,7 @@ import { createSignal, createEffect, Show } from 'solid-js';
 
 interface ProjectHealthCardProps {
   project: any;
+  onArchiveToggle?: () => void;
 }
 
 export default function ProjectHealthCard(props: ProjectHealthCardProps) {
@@ -16,6 +17,38 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
     schedule: { daysRemaining: 0, onTrack: true },
     loading: true
   });
+  const [isArchiving, setIsArchiving] = createSignal(false);
+
+  const handleArchiveToggle = async (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm(`Are you sure you want to ${props.project.isArchived ? 'unarchive' : 'archive'} this project?`)) {
+      return;
+    }
+
+    setIsArchiving(true);
+    try {
+      const response = await fetch(`/api/projects/${props.project.id}/archive`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isArchived: !props.project.isArchived }),
+      });
+
+      if (response.ok) {
+        if (props.onArchiveToggle) {
+          props.onArchiveToggle();
+        }
+      } else {
+        alert('Failed to update archive status');
+      }
+    } catch (error) {
+      console.error('Error toggling archive:', error);
+      alert('Error updating archive status');
+    } finally {
+      setIsArchiving(false);
+    }
+  };
 
   createEffect(async () => {
     // Fetch health indicators for this project
@@ -230,14 +263,33 @@ export default function ProjectHealthCard(props: ProjectHealthCardProps) {
           </div>
         </div>
 
-        {/* Enter Project Button */}
-        <a
-          href={`/projects/${props.project.id}`}
-          class="block w-full text-center text-white py-3 px-4 rounded-lg font-semibold transition-all hover:opacity-90"
-          style="background-color: #FF6600;"
-        >
-          Enter Project →
-        </a>
+        {/* Actions */}
+        <div class="space-y-2">
+          <a
+            href={`/projects/${props.project.id}`}
+            class="block w-full text-center text-white py-3 px-4 rounded-lg font-semibold transition-all hover:opacity-90"
+            style="background-color: #FF6600;"
+          >
+            Enter Project →
+          </a>
+
+          <button
+            onClick={handleArchiveToggle}
+            disabled={isArchiving()}
+            class="w-full text-center py-2 px-4 rounded-lg text-sm font-medium transition-all border border-gray-700 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            classList={{
+              'text-gray-400': !props.project.isArchived,
+              'text-yellow-400': props.project.isArchived
+            }}
+          >
+            {isArchiving()
+              ? 'Processing...'
+              : props.project.isArchived
+                ? '📦 Unarchive Project'
+                : '🗃️ Archive Project'
+            }
+          </button>
+        </div>
       </div>
     </div>
   );

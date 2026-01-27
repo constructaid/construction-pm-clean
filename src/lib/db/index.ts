@@ -4,6 +4,11 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
+import * as templateSchema from './project-templates-schema';
+import * as hrSchema from './hr-schema';
+
+// Combine schemas
+const combinedSchema = { ...schema, ...templateSchema, ...hrSchema };
 
 // Get database URL from environment
 // Handle both Astro (import.meta.env) and Node (process.env) contexts
@@ -19,7 +24,9 @@ if (!DATABASE_URL) {
 const queryClient = postgres(DATABASE_URL);
 
 // Create Drizzle instance
-export const db = drizzle(queryClient, { schema });
+export const db = drizzle(queryClient, { schema: combinedSchema });
 
-// Export schema
+// Export schemas
 export * from './schema';
+export * from './project-templates-schema';
+export * from './hr-schema';

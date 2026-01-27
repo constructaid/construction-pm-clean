@@ -5,6 +5,7 @@
  */
 import { createSignal, Show, For } from 'solid-js';
 import type { UserRole } from '../lib/db/schemas/User';
+import { authService } from '../lib/client/authService';
 
 interface FormData {
   email: string;
@@ -145,12 +146,24 @@ export default function RegistrationForm() {
         return;
       }
 
+      // Store authentication tokens
+      if (result.accessToken && result.refreshToken) {
+        authService.setAuth(
+          {
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+          },
+          result.user
+        );
+      }
+
       // Success - show success message
       setSubmitSuccess(true);
 
-      // Redirect to verification page after 2 seconds
+      // Redirect based on user role after 2 seconds (user is now logged in)
+      const redirectPath = authService.getRoleBasedRedirect(result.user.role);
       setTimeout(() => {
-        window.location.href = '/verify-email?email=' + encodeURIComponent(formData().email);
+        window.location.href = redirectPath;
       }, 2000);
 
     } catch (error) {

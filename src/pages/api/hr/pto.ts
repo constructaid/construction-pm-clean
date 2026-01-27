@@ -3,289 +3,274 @@
  * GET /api/hr/pto - Fetch PTO requests with filtering
  * POST /api/hr/pto - Create new PTO request
  * PUT /api/hr/pto - Update PTO request (approve/deny)
+ *
+ * SECURITY: PTO data is sensitive
+ * - Only GC and ADMIN can access all PTO requests
+ * - Employees can only view their own PTO requests (future enhancement)
  */
 import type { APIRoute } from 'astro';
+import { db } from '../../../lib/db';
+import { ptoRequests, employees, ptoBalances } from '../../../lib/db/hr-schema';
+import { eq, and, isNull, desc, sql } from 'drizzle-orm';
+import { apiHandler, requireAuth, UnauthorizedError, ValidationError, NotFoundError } from '../../../lib/api/error-handler';
 
 export const prerender = false;
 
-// Mock PTO data
-const mockPTORequests = [
-  {
-    id: 1,
-    employeeId: 1,
-    employeeName: 'John Doe',
-    type: 'vacation',
-    status: 'approved',
-    startDate: '2025-12-20',
-    endDate: '2025-12-27',
-    totalDays: 6,
-    reason: 'Family holiday vacation',
-    requestedAt: '2025-10-15T10:30:00Z',
-    reviewedBy: 1,
-    reviewedAt: '2025-10-16T14:22:00Z',
-    reviewNotes: 'Approved',
-  },
-  {
-    id: 2,
-    employeeId: 2,
-    employeeName: 'Sarah Johnson',
-    type: 'sick',
-    status: 'pending',
-    startDate: '2025-11-08',
-    endDate: '2025-11-08',
-    totalDays: 1,
-    reason: 'Medical appointment',
-    requestedAt: '2025-11-01T08:15:00Z',
-    reviewedBy: null,
-    reviewedAt: null,
-    reviewNotes: null,
-  },
-  {
-    id: 3,
-    employeeId: 3,
-    employeeName: 'Michael Chen',
-    type: 'personal',
-    status: 'approved',
-    startDate: '2025-11-15',
-    endDate: '2025-11-15',
-    totalDays: 1,
-    reason: 'Personal matters',
-    requestedAt: '2025-11-02T13:45:00Z',
-    reviewedBy: 1,
-    reviewedAt: '2025-11-03T09:10:00Z',
-    reviewNotes: 'Approved',
-  },
-  {
-    id: 4,
-    employeeId: 4,
-    employeeName: 'Emily Rodriguez',
-    type: 'vacation',
-    status: 'pending',
-    startDate: '2025-12-01',
-    endDate: '2025-12-05',
-    totalDays: 5,
-    reason: 'Thanksgiving extended weekend',
-    requestedAt: '2025-11-04T11:20:00Z',
-    reviewedBy: null,
-    reviewedAt: null,
-    reviewNotes: null,
-  },
-  {
-    id: 5,
-    employeeId: 5,
-    employeeName: 'David Williams',
-    type: 'vacation',
-    status: 'denied',
-    startDate: '2025-11-10',
-    endDate: '2025-11-12',
-    totalDays: 3,
-    reason: 'Weekend trip',
-    requestedAt: '2025-11-01T16:00:00Z',
-    reviewedBy: 2,
-    reviewedAt: '2025-11-02T10:30:00Z',
-    reviewNotes: 'Critical project milestone during this period',
-  },
-];
+export const GET: APIRoute = apiHandler(async (context) => {
+  // Require authentication
+  requireAuth(context);
 
-export const GET: APIRoute = async ({ request }) => {
-  try {
-    const url = new URL(request.url);
-    const employeeId = url.searchParams.get('employeeId');
-    const status = url.searchParams.get('status');
-    const type = url.searchParams.get('type');
-
-    let filtered = [...mockPTORequests];
-
-    // Filter by employee
-    if (employeeId) {
-      filtered = filtered.filter(req => req.employeeId === parseInt(employeeId));
-    }
-
-    // Filter by status
-    if (status && status !== 'all') {
-      filtered = filtered.filter(req => req.status === status);
-    }
-
-    // Filter by type
-    if (type && type !== 'all') {
-      filtered = filtered.filter(req => req.type === type);
-    }
-
-    // Sort by request date (newest first)
-    filtered.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-
-    // Calculate statistics
-    const stats = {
-      totalRequests: mockPTORequests.length,
-      pending: mockPTORequests.filter(r => r.status === 'pending').length,
-      approved: mockPTORequests.filter(r => r.status === 'approved').length,
-      denied: mockPTORequests.filter(r => r.status === 'denied').length,
-      upcomingPTO: mockPTORequests.filter(r =>
-        r.status === 'approved' && new Date(r.startDate) > new Date()
-      ).length,
-    };
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          requests: filtered,
-          stats,
-        },
-        count: filtered.length,
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    console.error('Error fetching PTO requests:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Failed to fetch PTO requests',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  // Only GC and ADMIN can access HR data
+  const user = context.locals.user;
+  if (!user || (user.role !== 'GC' && user.role !== 'ADMIN')) {
+    throw new UnauthorizedError('Only General Contractors and Admins can access PTO data');
   }
-};
 
-export const POST: APIRoute = async ({ request }) => {
-  try {
-    const body = await request.json();
+  const url = new URL(context.request.url);
+  const employeeId = url.searchParams.get('employeeId');
+  const status = url.searchParams.get('status');
+  const type = url.searchParams.get('type');
 
-    // Validate required fields
-    if (!body.employeeId || !body.type || !body.startDate || !body.endDate) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Missing required fields',
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
+  // Build query conditions
+  const conditions: any[] = [isNull(ptoRequests.deletedAt)];
 
-    // Calculate total days
-    const start = new Date(body.startDate);
-    const end = new Date(body.endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  // Filter by employee
+  if (employeeId) {
+    conditions.push(eq(ptoRequests.employeeId, parseInt(employeeId)));
+  }
 
-    // Create new PTO request
-    const newRequest = {
-      id: mockPTORequests.length + 1,
+  // Filter by status
+  if (status && status !== 'all') {
+    conditions.push(eq(ptoRequests.status, status as any));
+  }
+
+  // Filter by type
+  if (type && type !== 'all') {
+    conditions.push(eq(ptoRequests.type, type as any));
+  }
+
+  // Fetch PTO requests with employee info
+  const requestsList = await db
+    .select({
+      id: ptoRequests.id,
+      employeeId: ptoRequests.employeeId,
+      type: ptoRequests.type,
+      status: ptoRequests.status,
+      startDate: ptoRequests.startDate,
+      endDate: ptoRequests.endDate,
+      totalDays: ptoRequests.totalDays,
+      reason: ptoRequests.reason,
+      requestedAt: ptoRequests.requestedAt,
+      reviewedBy: ptoRequests.reviewedBy,
+      reviewedAt: ptoRequests.reviewedAt,
+      reviewNotes: ptoRequests.reviewNotes,
+      employeeFirstName: employees.firstName,
+      employeeLastName: employees.lastName,
+    })
+    .from(ptoRequests)
+    .leftJoin(employees, eq(ptoRequests.employeeId, employees.id))
+    .where(and(...conditions))
+    .orderBy(desc(ptoRequests.requestedAt));
+
+  // Transform to match frontend interface
+  const transformed = requestsList.map(req => ({
+    id: req.id,
+    employeeId: req.employeeId,
+    employeeName: `${req.employeeFirstName || ''} ${req.employeeLastName || ''}`.trim() || 'Unknown',
+    type: req.type,
+    status: req.status,
+    startDate: req.startDate,
+    endDate: req.endDate,
+    totalDays: req.totalDays ? parseFloat(req.totalDays) : 0,
+    reason: req.reason,
+    requestedAt: req.requestedAt?.toISOString() || null,
+    reviewedBy: req.reviewedBy,
+    reviewedAt: req.reviewedAt?.toISOString() || null,
+    reviewNotes: req.reviewNotes,
+  }));
+
+  // Calculate statistics from all requests (not just filtered)
+  const allRequests = await db
+    .select()
+    .from(ptoRequests)
+    .where(isNull(ptoRequests.deletedAt));
+
+  const now = new Date();
+  const stats = {
+    totalRequests: allRequests.length,
+    pending: allRequests.filter(r => r.status === 'pending').length,
+    approved: allRequests.filter(r => r.status === 'approved').length,
+    denied: allRequests.filter(r => r.status === 'denied').length,
+    upcomingPTO: allRequests.filter(r =>
+      r.status === 'approved' && r.startDate && new Date(r.startDate) > now
+    ).length,
+  };
+
+  return {
+    success: true,
+    data: {
+      requests: transformed,
+      stats,
+    },
+    count: transformed.length,
+  };
+});
+
+export const POST: APIRoute = apiHandler(async (context) => {
+  // Require authentication
+  requireAuth(context);
+
+  const user = context.locals.user;
+  if (!user) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  const body = await context.request.json();
+
+  // Validate required fields
+  if (!body.employeeId || !body.type || !body.startDate || !body.endDate) {
+    throw new ValidationError('Missing required fields: employeeId, type, startDate, endDate');
+  }
+
+  // Calculate total days
+  const start = new Date(body.startDate);
+  const end = new Date(body.endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+  // Create new PTO request
+  const [newRequest] = await db
+    .insert(ptoRequests)
+    .values({
       employeeId: body.employeeId,
-      employeeName: body.employeeName || 'Unknown Employee',
       type: body.type,
       status: 'pending',
       startDate: body.startDate,
       endDate: body.endDate,
-      totalDays: diffDays,
-      reason: body.reason || '',
-      requestedAt: new Date().toISOString(),
-      reviewedBy: null,
-      reviewedAt: null,
-      reviewNotes: null,
-    };
+      totalDays: diffDays.toString(),
+      reason: body.reason || null,
+      notes: body.notes || null,
+    })
+    .returning();
 
-    mockPTORequests.push(newRequest);
+  // Get employee name for response
+  const [employee] = await db
+    .select({ firstName: employees.firstName, lastName: employees.lastName })
+    .from(employees)
+    .where(eq(employees.id, body.employeeId))
+    .limit(1);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: { request: newRequest },
-        message: 'PTO request submitted successfully',
-      }),
-      {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' },
+  return {
+    success: true,
+    data: {
+      request: {
+        ...newRequest,
+        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown',
+        totalDays: diffDays,
+        requestedAt: newRequest.requestedAt?.toISOString(),
       }
-    );
-  } catch (error) {
-    console.error('Error creating PTO request:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Failed to create PTO request',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    },
+    message: 'PTO request submitted successfully',
+  };
+});
+
+export const PUT: APIRoute = apiHandler(async (context) => {
+  // Require authentication
+  requireAuth(context);
+
+  // Only GC and ADMIN can approve/deny PTO
+  const user = context.locals.user;
+  if (!user || (user.role !== 'GC' && user.role !== 'ADMIN')) {
+    throw new UnauthorizedError('Only General Contractors and Admins can approve/deny PTO requests');
   }
-};
 
-export const PUT: APIRoute = async ({ request }) => {
-  try {
-    const body = await request.json();
+  const body = await context.request.json();
 
-    if (!body.id || !body.status) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Missing required fields',
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
+  if (!body.id || !body.status) {
+    throw new ValidationError('Missing required fields: id, status');
+  }
 
-    // Find and update the request
-    const requestIndex = mockPTORequests.findIndex(r => r.id === body.id);
+  // Find the request
+  const [existing] = await db
+    .select()
+    .from(ptoRequests)
+    .where(and(
+      eq(ptoRequests.id, body.id),
+      isNull(ptoRequests.deletedAt)
+    ))
+    .limit(1);
 
-    if (requestIndex === -1) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'PTO request not found',
-        }),
-        {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
+  if (!existing) {
+    throw new NotFoundError('PTO request', body.id);
+  }
 
-    mockPTORequests[requestIndex] = {
-      ...mockPTORequests[requestIndex],
+  // Update the request
+  const [updated] = await db
+    .update(ptoRequests)
+    .set({
       status: body.status,
-      reviewedBy: body.reviewedBy || 1,
-      reviewedAt: new Date().toISOString(),
-      reviewNotes: body.reviewNotes || '',
-    };
+      reviewedBy: user.id,
+      reviewedAt: new Date(),
+      reviewNotes: body.reviewNotes || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(ptoRequests.id, body.id))
+    .returning();
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: { request: mockPTORequests[requestIndex] },
-        message: `PTO request ${body.status}`,
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    console.error('Error updating PTO request:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Failed to update PTO request',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  // If approved, update PTO balance
+  if (body.status === 'approved' && existing.status === 'pending') {
+    const totalDays = parseFloat(existing.totalDays || '0');
+    const ptoType = existing.type;
+
+    // Update balance based on PTO type
+    if (ptoType === 'vacation') {
+      await db
+        .update(ptoBalances)
+        .set({
+          vacationUsed: sql`${ptoBalances.vacationUsed} + ${totalDays}`,
+          vacationBalance: sql`${ptoBalances.vacationBalance} - ${totalDays}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(ptoBalances.employeeId, existing.employeeId));
+    } else if (ptoType === 'sick') {
+      await db
+        .update(ptoBalances)
+        .set({
+          sickUsed: sql`${ptoBalances.sickUsed} + ${totalDays}`,
+          sickBalance: sql`${ptoBalances.sickBalance} - ${totalDays}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(ptoBalances.employeeId, existing.employeeId));
+    } else if (ptoType === 'personal') {
+      await db
+        .update(ptoBalances)
+        .set({
+          personalUsed: sql`${ptoBalances.personalUsed} + ${totalDays}`,
+          personalBalance: sql`${ptoBalances.personalBalance} - ${totalDays}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(ptoBalances.employeeId, existing.employeeId));
+    }
   }
-};
+
+  // Get employee name
+  const [employee] = await db
+    .select({ firstName: employees.firstName, lastName: employees.lastName })
+    .from(employees)
+    .where(eq(employees.id, existing.employeeId))
+    .limit(1);
+
+  return {
+    success: true,
+    data: {
+      request: {
+        ...updated,
+        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown',
+        totalDays: parseFloat(updated.totalDays || '0'),
+        requestedAt: updated.requestedAt?.toISOString(),
+        reviewedAt: updated.reviewedAt?.toISOString(),
+      }
+    },
+    message: `PTO request ${body.status}`,
+  };
+});

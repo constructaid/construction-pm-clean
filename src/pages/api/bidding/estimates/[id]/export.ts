@@ -8,7 +8,7 @@ import { db } from '../../../../../lib/db';
 import { costEstimates, costEstimateLineItems } from '../../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { checkRBAC } from '../../../../../lib/middleware/rbac';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 
 export const GET: APIRoute = async (context) => {
@@ -69,24 +69,42 @@ export const GET: APIRoute = async (context) => {
   }
 };
 
-function exportToExcel(estimate: any, lineItems: any[]) {
+async function exportToExcel(estimate: any, lineItems: any[]) {
   const formatCurrency = (cents: number) => (cents / 100);
 
   // Create a new workbook
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'ConstructAid';
+  workbook.created = new Date();
 
-  // Create header information
-  const headerData = [
-    ['Cost Estimate', estimate.estimateNumber],
-    ['Title', estimate.title],
-    ['Status', estimate.status.toUpperCase()],
-    ['Version', estimate.version],
-    ['Created', new Date(estimate.createdAt).toLocaleDateString()],
-    [],
+  // Add main worksheet
+  const worksheet = workbook.addWorksheet('Cost Estimate');
+
+  // Set column widths
+  worksheet.columns = [
+    { width: 12 }, // CSI Division
+    { width: 12 }, // Section
+    { width: 40 }, // Description
+    { width: 10 }, // Quantity
+    { width: 8 },  // Unit
+    { width: 12 }, // Unit Cost
+    { width: 12 }, // Labor
+    { width: 12 }, // Material
+    { width: 12 }, // Equipment
+    { width: 15 }, // Subcontractor
+    { width: 12 }, // Total
   ];
 
-  // Create line items data with headers
-  const lineItemsHeaders = [
+  // Add header information
+  worksheet.addRow(['Cost Estimate', estimate.estimateNumber]);
+  worksheet.addRow(['Title', estimate.title]);
+  worksheet.addRow(['Status', estimate.status.toUpperCase()]);
+  worksheet.addRow(['Version', estimate.version]);
+  worksheet.addRow(['Created', new Date(estimate.createdAt).toLocaleDateString()]);
+  worksheet.addRow([]);
+
+  // Add line items headers
+  const headerRow = worksheet.addRow([
     'CSI Division',
     'Section',
     'Description',
@@ -98,89 +116,85 @@ function exportToExcel(estimate: any, lineItems: any[]) {
     'Equipment Cost',
     'Subcontractor Cost',
     'Total Cost',
-  ];
-
-  const lineItemsData = lineItems.map(item => [
-    item.csiDivision || '',
-    item.csiSection || '',
-    item.description || '',
-    item.quantity || 0,
-    item.unit || '',
-    formatCurrency(item.unitCost || 0),
-    formatCurrency(item.laborCost || 0),
-    formatCurrency(item.materialCost || 0),
-    formatCurrency(item.equipmentCost || 0),
-    formatCurrency(item.subcontractorCost || 0),
-    formatCurrency(item.totalCost || 0),
   ]);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF10B981' },
+  };
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
 
-  // Create summary data
-  const summaryData = [
-    [],
-    ['Cost Summary'],
+  // Add line items
+  lineItems.forEach(item => {
+    const row = worksheet.addRow([
+      item.csiDivision || '',
+      item.csiSection || '',
+      item.description || '',
+      item.quantity || 0,
+      item.unit || '',
+      formatCurrency(item.unitCost || 0),
+      formatCurrency(item.laborCost || 0),
+      formatCurrency(item.materialCost || 0),
+      formatCurrency(item.equipmentCost || 0),
+      formatCurrency(item.subcontractorCost || 0),
+      formatCurrency(item.totalCost || 0),
+    ]);
+
+    // Format currency columns
+    [6, 7, 8, 9, 10, 11].forEach(col => {
+      row.getCell(col).numFmt = '$#,##0.00';
+    });
+  });
+
+  // Add summary section
+  worksheet.addRow([]);
+  const summaryHeaderRow = worksheet.addRow(['Cost Summary']);
+  summaryHeaderRow.font = { bold: true };
+
+  const summaryItems = [
     ['Subtotal', formatCurrency(estimate.subtotalCost || 0)],
     [`Overhead (${estimate.overheadPercentage}%)`, formatCurrency(estimate.overhead || 0)],
     [`Profit (${estimate.profitPercentage}%)`, formatCurrency(estimate.profit || 0)],
     [`Bond (${estimate.bondPercentage}%)`, formatCurrency(estimate.bondCost || 0)],
     [`Contingency (${estimate.contingencyPercentage}%)`, formatCurrency(estimate.contingency || 0)],
-    [],
-    ['TOTAL ESTIMATE', formatCurrency(estimate.totalEstimatedCost || 0)],
   ];
 
-  // Combine all data
-  const worksheetData = [
-    ...headerData,
-    lineItemsHeaders,
-    ...lineItemsData,
-    ...summaryData,
+  summaryItems.forEach(item => {
+    const row = worksheet.addRow(item);
+    row.getCell(2).numFmt = '$#,##0.00';
+  });
+
+  worksheet.addRow([]);
+  const totalRow = worksheet.addRow(['TOTAL ESTIMATE', formatCurrency(estimate.totalEstimatedCost || 0)]);
+  totalRow.font = { bold: true };
+  totalRow.getCell(2).numFmt = '$#,##0.00';
+  totalRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF3F4F6' },
+  };
+
+  // Add Division Summary worksheet
+  const divisionSheet = workbook.addWorksheet('Division Summary');
+  divisionSheet.columns = [
+    { width: 12 }, // Division
+    { width: 35 }, // Title
+    { width: 10 }, // Items
+    { width: 15 }, // Total
   ];
 
-  // Create worksheet
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+  const divisionHeaderRow = divisionSheet.addRow(['Division Summary']);
+  divisionHeaderRow.font = { bold: true };
 
-  // Set column widths
-  worksheet['!cols'] = [
-    { wch: 12 }, // CSI Division
-    { wch: 12 }, // Section
-    { wch: 40 }, // Description
-    { wch: 10 }, // Quantity
-    { wch: 8 },  // Unit
-    { wch: 12 }, // Unit Cost
-    { wch: 12 }, // Labor
-    { wch: 12 }, // Material
-    { wch: 12 }, // Equipment
-    { wch: 15 }, // Subcontractor
-    { wch: 12 }, // Total
-  ];
-
-  // Apply formatting to currency columns (columns F-K in Excel)
-  const currencyFormat = '$#,##0.00';
-  const startRow = headerData.length + 1; // After headers
-  const endRow = startRow + lineItemsData.length;
-
-  for (let row = startRow; row < endRow; row++) {
-    ['F', 'G', 'H', 'I', 'J', 'K'].forEach(col => {
-      const cellAddress = `${col}${row}`;
-      if (worksheet[cellAddress]) {
-        worksheet[cellAddress].z = currencyFormat;
-      }
-    });
-  }
-
-  // Format summary currency values
-  const summaryStartRow = endRow + 2;
-  for (let i = 0; i < 7; i++) {
-    const cellAddress = `B${summaryStartRow + i}`;
-    if (worksheet[cellAddress] && typeof worksheet[cellAddress].v === 'number') {
-      worksheet[cellAddress].z = currencyFormat;
-    }
-  }
-
-  // Add worksheet to workbook
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Cost Estimate');
-
-  // Create a second sheet grouped by CSI Division
-  const divisionData = [['Division Summary'], ['CSI Division', 'Division Title', 'Items', 'Total Cost'], []];
+  const divisionTableHeader = divisionSheet.addRow(['CSI Division', 'Division Title', 'Items', 'Total Cost']);
+  divisionTableHeader.font = { bold: true };
+  divisionTableHeader.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF10B981' },
+  };
+  divisionTableHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
 
   // Group line items by division
   const divisionTotals = lineItems.reduce((acc, item) => {
@@ -223,36 +237,19 @@ function exportToExcel(estimate: any, lineItems: any[]) {
   };
 
   Object.keys(divisionTotals).sort().forEach(div => {
-    divisionData.push([
+    const row = divisionSheet.addRow([
       div,
       csiDivisions[div] || 'Unknown',
       divisionTotals[div].count,
       formatCurrency(divisionTotals[div].total),
     ]);
+    row.getCell(4).numFmt = '$#,##0.00';
   });
 
-  const divisionSheet = XLSX.utils.aoa_to_sheet(divisionData);
-  divisionSheet['!cols'] = [
-    { wch: 12 }, // Division
-    { wch: 35 }, // Title
-    { wch: 10 }, // Items
-    { wch: 15 }, // Total
-  ];
-
-  // Format division totals as currency
-  for (let i = 3; i < divisionData.length; i++) {
-    const cellAddress = `D${i}`;
-    if (divisionSheet[cellAddress]) {
-      divisionSheet[cellAddress].z = currencyFormat;
-    }
-  }
-
-  XLSX.utils.book_append_sheet(workbook, divisionSheet, 'Division Summary');
-
   // Generate Excel file buffer
-  const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  const buffer = await workbook.xlsx.writeBuffer();
 
-  return new Response(excelBuffer, {
+  return new Response(buffer, {
     status: 200,
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

@@ -1,0 +1,128 @@
+/**
+ * Print Styles for ConstructAid
+ * Ensures proper formatting when users print pages
+ */
+
+@media print {
+  /* Reset page margins for clean printing */
+  @page {
+    margin: 0.75in 0.5in; /* Top/Bottom: 0.75in, Left/Right: 0.5in */
+    size: letter; /* US Letter (8.5" x 11") */
+  }
+
+  /* Ensure body has proper margins */
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Hide unnecessary elements for print */
+  nav,
+  .navbar,
+  [class*="Navbar"],
+  [class*="ChatWidget"],
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure main content has margins */
+  main,
+  [role="main"] {
+    margin: 0 !important;
+    padding: 1in 0.75in !important; /* Standard document margins */
+    max-width: 100% !important;
+  }
+
+  /* Content sections should have proper spacing */
+  section,
+  article,
+  .section {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    color: black !important;
+  }
+
+  /* Tables */
+  table {
+    page-break-inside: avoid;
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+  }
+
+  /* Links - show URL in print */
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+  }
+
+  a[href^="#"]:after,
+  a[href^="javascript:"]:after {
+    content: "";
+  }
+
+  /* Images */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Cards and containers */
+  .card,
+  [class*="card"] {
+    border: 1px solid #ddd !important;
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    page-break-inside: avoid;
+  }
+
+  /* Force black text for readability */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Preserve important backgrounds (like headers) */
+  thead,
+  th {
+    background: #f0f0f0 !important;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+}
+
+/* Print-specific utility classes (can use in any mode) */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block !important;
+  }
+
+  .screen-only {
+    display: none !important;
+  }
+}

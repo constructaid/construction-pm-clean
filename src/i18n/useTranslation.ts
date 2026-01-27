@@ -41,11 +41,12 @@ export function useTranslation() {
   });
 
   // Return translation function
-  return (key: string, options?: any) => {
+  return (key: string, options?: any): string => {
     // Access the signal to create reactivity
     _();
     // Return the translation if i18next is ready, otherwise return the key
-    return i18next.isInitialized ? i18next.t(key, options) : key;
+    const result = i18next.isInitialized ? i18next.t(key, options) : key;
+    return typeof result === 'string' ? result : key;
   };
 }
 

@@ -1,0 +1,230 @@
+/**
+ * Golden Ratio Design System
+ * Foundation for ConstructAid's visual harmony
+ * Based on φ (phi) = 1.618033988749895
+ */
+
+:root {
+  /* ============================================
+     GOLDEN RATIO CONSTANTS
+     ============================================ */
+  --phi: 1.618033988749895;
+  --phi-inverse: 0.6180339887498949; /* 1/φ */
+  --phi-squared: 2.618033988749895; /* φ² */
+
+  /* ============================================
+     FIBONACCI SEQUENCE
+     Used for spacing, sizing, and proportions
+     ============================================ */
+  --fib-0: 0;
+  --fib-1: 1px;
+  --fib-2: 2px;
+  --fib-3: 3px;
+  --fib-5: 5px;
+  --fib-8: 8px;
+  --fib-13: 13px;
+  --fib-21: 21px;
+  --fib-34: 34px;
+  --fib-55: 55px;
+  --fib-89: 89px;
+  --fib-144: 144px;
+  --fib-233: 233px;
+  --fib-377: 377px;
+  --fib-610: 610px;
+  --fib-987: 987px;
+
+  /* ============================================
+     SPACING SCALE (Fibonacci-based)
+     Use these instead of arbitrary p-4, m-6, etc.
+     ============================================ */
+  --space-xs: var(--fib-8);    /* 8px - tight spacing */
+  --space-sm: var(--fib-13);   /* 13px - compact */
+  --space-md: var(--fib-21);   /* 21px - default */
+  --space-lg: var(--fib-34);   /* 34px - spacious */
+  --space-xl: var(--fib-55);   /* 55px - generous */
+  --space-2xl: var(--fib-89);  /* 89px - hero sections */
+
+  /* ============================================
+     LAYOUT DIMENSIONS (Golden Rectangle)
+     Sidebar : Content : Aside = φ relationships
+     ============================================ */
+  --sidebar-width: 233px;           /* Fibonacci number */
+  --content-width-sm: 610px;        /* Fibonacci number */
+  --content-width-md: 987px;        /* Fibonacci number */
+  --content-width-lg: calc(987px * var(--phi)); /* ~1597px */
+
+  /* Golden rectangle for cards */
+  --card-width-sm: 233px;
+  --card-height-sm: 144px;          /* 233 × φ⁻¹ ≈ 144 */
+
+  --card-width-md: 377px;
+  --card-height-md: 233px;          /* 377 × φ⁻¹ ≈ 233 */
+
+  --card-width-lg: 610px;
+  --card-height-lg: 377px;          /* 610 × φ⁻¹ ≈ 377 */
+
+  /* ============================================
+     TYPOGRAPHY SCALE (Modular scale with φ)
+     Each size is previous × φ
+     ============================================ */
+  --font-size-xs: 10px;                             /* base × φ⁻² */
+  --font-size-sm: 13px;                             /* base × φ⁻¹ */
+  --font-size-base: 16px;                           /* base */
+  --font-size-md: calc(16px * var(--phi));          /* 26px */
+  --font-size-lg: calc(16px * var(--phi-squared));  /* 42px */
+  --font-size-xl: calc(16px * var(--phi) * var(--phi-squared)); /* 68px */
+  --font-size-2xl: calc(16px * var(--phi-squared) * var(--phi-squared)); /* 110px */
+
+  /* Line height using golden ratio */
+  --line-height-tight: var(--phi-inverse);   /* 0.618 */
+  --line-height-normal: 1;                   /* 1.0 */
+  --line-height-relaxed: var(--phi);         /* 1.618 */
+
+  /* ============================================
+     BORDER RADIUS (Fibonacci sequence)
+     ============================================ */
+  --radius-sm: var(--fib-3);    /* 3px */
+  --radius-md: var(--fib-5);    /* 5px */
+  --radius-lg: var(--fib-8);    /* 8px */
+  --radius-xl: var(--fib-13);   /* 13px */
+  --radius-2xl: var(--fib-21);  /* 21px */
+  --radius-full: 9999px;
+
+  /* ============================================
+     SHADOWS (Fibonacci-based blur & spread)
+     ============================================ */
+  --shadow-sm: 0 var(--fib-1) var(--fib-3) rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 var(--fib-2) var(--fib-8) rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 var(--fib-5) var(--fib-21) rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 var(--fib-8) var(--fib-34) rgba(0, 0, 0, 0.16);
+
+  /* ============================================
+     Z-INDEX SCALE (Fibonacci for stacking)
+     ============================================ */
+  --z-base: 0;
+  --z-dropdown: 5;
+  --z-sticky: 8;
+  --z-fixed: 13;
+  --z-modal-backdrop: 21;
+  --z-modal: 34;
+  --z-popover: 55;
+  --z-tooltip: 89;
+
+  /* ============================================
+     TRANSITION TIMING (Fibonacci milliseconds)
+     ============================================ */
+  --duration-instant: 89ms;
+  --duration-fast: 144ms;
+  --duration-normal: 233ms;
+  --duration-slow: 377ms;
+  --duration-slower: 610ms;
+
+  /* Easing based on golden ratio */
+  --ease-in: cubic-bezier(0.618, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.382, 1);
+  --ease-in-out: cubic-bezier(0.618, 0, 0.382, 1);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Golden Rectangle containers */
+.golden-rect-sm {
+  width: var(--card-width-sm);
+  height: var(--card-height-sm);
+}
+
+.golden-rect-md {
+  width: var(--card-width-md);
+  height: var(--card-height-md);
+}
+
+.golden-rect-lg {
+  width: var(--card-width-lg);
+  height: var(--card-height-lg);
+}
+
+/* Fibonacci spacing utilities */
+.space-fib-8 { margin: var(--fib-8); }
+.space-fib-13 { margin: var(--fib-13); }
+.space-fib-21 { margin: var(--fib-21); }
+.space-fib-34 { margin: var(--fib-34); }
+.space-fib-55 { margin: var(--fib-55); }
+
+.gap-fib-8 { gap: var(--fib-8); }
+.gap-fib-13 { gap: var(--fib-13); }
+.gap-fib-21 { gap: var(--fib-21); }
+.gap-fib-34 { gap: var(--fib-34); }
+
+/* Golden ratio padding */
+.p-golden { padding: var(--space-md); }
+.px-golden { padding-left: var(--space-md); padding-right: var(--space-md); }
+.py-golden { padding-top: var(--space-md); padding-bottom: var(--space-md); }
+
+/* Aspect ratio helpers */
+.aspect-golden {
+  aspect-ratio: 1.618 / 1; /* Golden rectangle */
+}
+
+.aspect-golden-portrait {
+  aspect-ratio: 1 / 1.618; /* Inverse golden rectangle */
+}
+
+/* Typography scale */
+.text-fib-sm { font-size: var(--font-size-sm); }
+.text-fib-base { font-size: var(--font-size-base); }
+.text-fib-md { font-size: var(--font-size-md); }
+.text-fib-lg { font-size: var(--font-size-lg); }
+.text-fib-xl { font-size: var(--font-size-xl); }
+
+/* ============================================
+   GOLDEN SPIRAL VISUALIZATION
+   (For progress indicators, dashboards, etc.)
+   ============================================ */
+.golden-spiral {
+  position: relative;
+  width: 610px;
+  height: 377px;
+}
+
+.golden-spiral::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 61.8% 38.2%,
+      var(--color-primary) 0%,
+      transparent 50%);
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS (Fibonacci-based)
+   ============================================ */
+/*
+  Mobile: < 610px
+  Tablet: 610px - 987px
+  Desktop: 987px - 1597px
+  Wide: > 1597px
+*/
+
+@media (min-width: 610px) {
+  :root {
+    --content-width: var(--content-width-sm);
+  }
+}
+
+@media (min-width: 987px) {
+  :root {
+    --content-width: var(--content-width-md);
+  }
+}
+
+@media (min-width: 1597px) {
+  :root {
+    --content-width: var(--content-width-lg);
+  }
+}

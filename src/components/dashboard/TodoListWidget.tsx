@@ -5,6 +5,7 @@
  */
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import type { Task } from '../../lib/db/schemas/Task';
+import { TaskStatus, TaskType, TaskPriority } from '../../lib/db/schemas/Task';
 
 interface TodoListWidgetProps {
   userId: string;
@@ -35,9 +36,9 @@ export default function TodoListWidget(props: TodoListWidgetProps) {
           _id: '1',
           projectId: 'proj-1',
           title: 'Submit RFI for plumbing fixture specifications',
-          type: 'RFI',
-          status: 'pending',
-          priority: 'high',
+          type: TaskType.RFI,
+          status: TaskStatus.PENDING,
+          priority: TaskPriority.HIGH,
           assignedTo: [props.userId],
           assignedBy: 'gc-user-id',
           dueDate: new Date(Date.now() + 86400000), // Tomorrow
@@ -52,9 +53,9 @@ export default function TodoListWidget(props: TodoListWidgetProps) {
           _id: '2',
           projectId: 'proj-1',
           title: 'Review electrical submittal package',
-          type: 'submittal',
-          status: 'pending',
-          priority: 'medium',
+          type: TaskType.SUBMITTAL,
+          status: TaskStatus.PENDING,
+          priority: TaskPriority.MEDIUM,
           assignedTo: [props.userId],
           assignedBy: 'gc-user-id',
           dueDate: new Date(Date.now() + 172800000), // 2 days
@@ -68,9 +69,9 @@ export default function TodoListWidget(props: TodoListWidgetProps) {
           _id: '3',
           projectId: 'proj-2',
           title: 'Schedule pre-construction meeting',
-          type: 'general',
-          status: 'in_progress',
-          priority: 'urgent',
+          type: TaskType.GENERAL,
+          status: TaskStatus.IN_PROGRESS,
+          priority: TaskPriority.URGENT,
           assignedTo: [props.userId],
           assignedBy: 'owner-user-id',
           dueDate: new Date(Date.now() + 43200000), // 12 hours
@@ -91,7 +92,7 @@ export default function TodoListWidget(props: TodoListWidgetProps) {
     const task = tasks().find(t => t._id === taskId);
     if (!task) return;
 
-    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+    const newStatus = task.status === TaskStatus.COMPLETED ? TaskStatus.PENDING : TaskStatus.COMPLETED;
 
     try {
       await fetch(`/api/tasks/${taskId}`, {
@@ -205,14 +206,14 @@ export default function TodoListWidget(props: TodoListWidgetProps) {
                   <div class="flex items-start space-x-3">
                     <input
                       type="checkbox"
-                      checked={task.status === 'completed'}
+                      checked={task.status === TaskStatus.COMPLETED}
                       onChange={() => toggleTask(task._id)}
                       class="mt-1 w-4 h-4 text-primary-orange border-gray-300 rounded focus:ring-primary-orange cursor-pointer"
                     />
                     <div class="flex-1 min-w-0">
                       <p
                         class={`text-sm font-medium ${
-                          task.status === 'completed'
+                          task.status === TaskStatus.COMPLETED
                             ? 'line-through text-text-secondary'
                             : 'text-text-primary'
                         }`}
@@ -228,7 +229,7 @@ export default function TodoListWidget(props: TodoListWidgetProps) {
                         {task.dueDate && (
                           <span
                             class={`text-xs ${
-                              isOverdue(task.dueDate) && task.status !== 'completed'
+                              isOverdue(task.dueDate) && task.status !== TaskStatus.COMPLETED
                                 ? 'text-red-600 font-semibold'
                                 : 'text-text-secondary'
                             }`}

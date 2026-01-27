@@ -1,0 +1,82 @@
+---
+/**
+ * Login Page - User Authentication
+ * Allows users to sign in to their accounts
+ * Styled to match ConstructAid.net color scheme
+ */
+import Layout from '../layouts/Layout.astro';
+import LoginForm from '../components/LoginForm';
+---
+
+<Layout title="Login - ConstructAid">
+  <div class="min-h-screen bg-background-light flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      {/* Header */}
+      <div class="text-center">
+        <h1 class="text-4xl font-bold text-text-primary mb-2">
+          Welcome Back
+        </h1>
+        <p class="text-lg text-text-secondary">
+          Sign in to your ConstructAid account
+        </p>
+      </div>
+
+      {/* Login Form Card */}
+      <div class="bg-background-white rounded-lg shadow-ca-lg p-8">
+        <LoginForm client:load />
+      </div>
+
+      {/* Footer Links */}
+      <div class="text-center space-y-2">
+        <p class="text-text-secondary">
+          Don't have an account?{' '}
+          <a href="/register" class="text-primary-orange hover:underline font-semibold">
+            Sign up here
+          </a>
+        </p>
+        <p class="text-sm text-text-secondary">
+          <a href="/" class="text-primary-orange hover:underline">
+            Back to Home
+          </a>
+        </p>
+      </div>
+
+      {/* Features Overview */}
+      <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="w-12 h-12 bg-primary-orange rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-text-primary mb-1">Secure Access</h3>
+          <p class="text-sm text-text-secondary">Enterprise-grade security with JWT authentication</p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-12 h-12 bg-primary-orange rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-text-primary mb-1">Fast & Responsive</h3>
+          <p class="text-sm text-text-secondary">Access your projects from anywhere</p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-12 h-12 bg-primary-orange rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-text-primary mb-1">Team Collaboration</h3>
+          <p class="text-sm text-text-secondary">Work seamlessly with your team</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* Additional custom styles if needed */
+</style>

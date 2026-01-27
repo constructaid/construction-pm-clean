@@ -1,0 +1,14 @@
+---
+/**
+ * Clear Cookies Page
+ * Clears all authentication cookies to allow bypass mode to work
+ */
+
+// Clear all auth-related cookies
+Astro.cookies.delete('accessToken', { path: '/' });
+Astro.cookies.delete('refreshToken', { path: '/' });
+Astro.cookies.delete('sessionId', { path: '/' });
+
+// Redirect to projects page
+return Astro.redirect('/projects');
+---

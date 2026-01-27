@@ -94,9 +94,9 @@ export default function DailyReportForm(props: DailyReportFormProps) {
     setWorkforceEntries([...workforceEntries(), { trade: '', count: 0, company: '' }]);
   };
 
-  const updateWorkforceEntry = (index: number, field: keyof WorkforceEntry, value: any) => {
+  const updateWorkforceEntry = <K extends keyof WorkforceEntry>(index: number, field: K, value: WorkforceEntry[K]) => {
     const updated = [...workforceEntries()];
-    updated[index][field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setWorkforceEntries(updated);
   };
 
@@ -108,9 +108,9 @@ export default function DailyReportForm(props: DailyReportFormProps) {
     setEquipmentEntries([...equipmentEntries(), { equipment: '', hours: 0, operator: '' }]);
   };
 
-  const updateEquipmentEntry = (index: number, field: keyof EquipmentEntry, value: any) => {
+  const updateEquipmentEntry = <K extends keyof EquipmentEntry>(index: number, field: K, value: EquipmentEntry[K]) => {
     const updated = [...equipmentEntries()];
-    updated[index][field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setEquipmentEntries(updated);
   };
 
@@ -122,9 +122,9 @@ export default function DailyReportForm(props: DailyReportFormProps) {
     setMaterialDeliveries([...materialDeliveries(), { material: '', quantity: '', supplier: '', timeDelivered: '', receivedBy: '' }]);
   };
 
-  const updateMaterialDelivery = (index: number, field: keyof MaterialDelivery, value: any) => {
+  const updateMaterialDelivery = <K extends keyof MaterialDelivery>(index: number, field: K, value: MaterialDelivery[K]) => {
     const updated = [...materialDeliveries()];
-    updated[index][field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setMaterialDeliveries(updated);
   };
 
@@ -136,9 +136,9 @@ export default function DailyReportForm(props: DailyReportFormProps) {
     setWorkActivities([...workActivities(), { area: '', work: '', crew: '', percentComplete: 0 }]);
   };
 
-  const updateWorkActivity = (index: number, field: keyof WorkActivity, value: any) => {
+  const updateWorkActivity = <K extends keyof WorkActivity>(index: number, field: K, value: WorkActivity[K]) => {
     const updated = [...workActivities()];
-    updated[index][field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setWorkActivities(updated);
   };
 
@@ -150,9 +150,9 @@ export default function DailyReportForm(props: DailyReportFormProps) {
     setVisitors([...visitors(), { name: '', company: '', purpose: '', timeIn: '', timeOut: '' }]);
   };
 
-  const updateVisitor = (index: number, field: keyof Visitor, value: any) => {
+  const updateVisitor = <K extends keyof Visitor>(index: number, field: K, value: Visitor[K]) => {
     const updated = [...visitors()];
-    updated[index][field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setVisitors(updated);
   };
 

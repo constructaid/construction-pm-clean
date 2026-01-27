@@ -88,33 +88,103 @@ const formatCurrency = (amount: number) => {
 
 export function ProjectList() {
   const [searchTerm, setSearchTerm] = createSignal('');
-  const [statusFilter, setStatusFilter] = createSignal<string>('');
+  const [statusFilter, setStatusFilter] = createSignal<string>('all');
+  const [archivedFilter, setArchivedFilter] = createSignal<string>('false');
+  const [minBudget, setMinBudget] = createSignal('');
+  const [maxBudget, setMaxBudget] = createSignal('');
   const [dbProjects, setDbProjects] = createSignal<any[]>([]);
   const [loading, setLoading] = createSignal(true);
+  const [totalCount, setTotalCount] = createSignal(0);
+  const [currentUserId, setCurrentUserId] = createSignal<string>('');
+  let searchTimeout: number | undefined;
 
-  // Fetch projects from database on mount - only on client side
-  onMount(async () => {
+  // Fetch current user
+  const fetchCurrentUser = async () => {
     try {
-      const response = await fetch('/api/projects?userId=1'); // Using mock GC user ID
+      const response = await fetch('/api/me');
       if (response.ok) {
         const data = await response.json();
-        setDbProjects(data.data?.projects || []);
+        // Handle both {user: {...}} and direct user object formats
+        const user = data.user || data;
+        if (user && user.id) {
+          setCurrentUserId(user.id.toString());
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch current user:', error);
+    }
+  };
+
+  // Fetch projects from database with filters
+  const fetchProjects = async () => {
+    setLoading(true);
+    try {
+      // Don't send userId - let the backend use the authenticated user from session
+      const params = new URLSearchParams({
+        status: statusFilter() || 'all',
+        archived: archivedFilter() || 'false',
+      });
+
+      // Add search parameter if provided
+      if (searchTerm().trim()) {
+        params.append('search', searchTerm().trim());
+      }
+
+      // Add budget filters if provided
+      if (minBudget()) {
+        params.append('minBudget', minBudget());
+      }
+      if (maxBudget()) {
+        params.append('maxBudget', maxBudget());
+      }
+
+      const response = await fetch(`/api/projects?${params.toString()}`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[ProjectList] Received data from API:', result);
+        // Handle apiHandler wrapper structure: {success: true, data: {projects: [], pagination: {}}}
+        const data = result.data || result;
+        console.log('[ProjectList] Projects count:', data.projects?.length || 0);
+        setDbProjects(data.projects || []);
+        setTotalCount(data.pagination?.total || 0);
+        console.log('[ProjectList] dbProjects() after setting:', dbProjects());
+      } else {
+        console.error('[ProjectList] API response not OK:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch projects on mount
+  onMount(() => {
+    fetchProjects();
   });
 
-  const filteredProjects = () => {
-    return dbProjects().filter(project => {
-      const location = project.address || project.city || '';
-      const matchesSearch = project.name.toLowerCase().includes(searchTerm().toLowerCase()) ||
-                          location.toLowerCase().includes(searchTerm().toLowerCase());
-      const matchesStatus = !statusFilter() || project.status === statusFilter();
-      return matchesSearch && matchesStatus;
-    });
+  // Debounced search - refetch after user stops typing
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      fetchProjects();
+    }, 500) as unknown as number; // 500ms debounce
+  };
+
+  // Refetch when filters change
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    fetchProjects();
+  };
+
+  const handleArchivedChange = (value: string) => {
+    setArchivedFilter(value);
+    fetchProjects();
+  };
+
+  const handleBudgetChange = () => {
+    fetchProjects();
   };
 
   return (
@@ -136,7 +206,7 @@ export function ProjectList() {
 
         {/* Filters */}
         <div class="bg-white rounded shadow-ca-sm p-5 mb-6 border border-gray-200">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label class="block text-sm font-medium text-text-primary mb-2">Search Projects</label>
               <div class="relative">
@@ -145,71 +215,144 @@ export function ProjectList() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search by name or location..."
+                  placeholder="Search by name, number, location..."
                   value={searchTerm()}
-                  onInput={(e) => setSearchTerm(e.currentTarget.value)}
+                  onInput={(e) => handleSearchChange(e.currentTarget.value)}
                   class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
                 />
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-text-primary mb-2">Filter by Status</label>
+              <label class="block text-sm font-medium text-text-primary mb-2">Status</label>
               <select
                 value={statusFilter()}
-                onChange={(e) => setStatusFilter(e.currentTarget.value)}
+                onChange={(e) => handleStatusChange(e.currentTarget.value)}
                 class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
               >
-                <option value="">All Statuses</option>
+                <option value="all">All Statuses</option>
                 <option value="planning">Planning</option>
+                <option value="bidding">Bidding</option>
+                <option value="pre_construction">Pre-Construction</option>
                 <option value="in_progress">In Progress</option>
-                <option value="on_hold">On Hold</option>
+                <option value="closeout">Closeout</option>
                 <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="on_hold">On Hold</option>
               </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-primary mb-2">Archived</label>
+              <select
+                value={archivedFilter()}
+                onChange={(e) => handleArchivedChange(e.currentTarget.value)}
+                class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+              >
+                <option value="false">Active Only</option>
+                <option value="true">Archived Only</option>
+                <option value="all">All Projects</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-primary mb-2">Min Budget</label>
+              <input
+                type="number"
+                placeholder="Min $"
+                value={minBudget()}
+                onInput={(e) => setMinBudget(e.currentTarget.value)}
+                onBlur={handleBudgetChange}
+                class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                min="0"
+                step="10000"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-primary mb-2">Max Budget</label>
+              <input
+                type="number"
+                placeholder="Max $"
+                value={maxBudget()}
+                onInput={(e) => setMaxBudget(e.currentTarget.value)}
+                onBlur={handleBudgetChange}
+                class="w-full px-3 py-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-ca-orange focus:border-ca-orange transition-all"
+                min="0"
+                step="10000"
+              />
             </div>
           </div>
         </div>
 
         {/* Projects Grid */}
         <Show
-          when={filteredProjects().length > 0}
+          when={!loading()}
           fallback={
             <div class="text-center py-16 bg-white rounded shadow-ca-sm border border-gray-200">
               <div class="flex justify-center mb-4">
-                <div class="bg-gray-100 rounded-full p-4">
-                  <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                  </svg>
-                </div>
+                <div class="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-ca-orange"></div>
               </div>
-              <h3 class="text-lg font-semibold text-text-primary">No projects found</h3>
-              <p class="mt-2 text-text-secondary">Get started by creating a new project.</p>
-              <div class="mt-6">
-                <a
-                  href="/projects/new"
-                  class="inline-flex items-center bg-ca-orange hover:bg-ca-orange-dark text-white px-5 py-2.5 rounded font-medium transition-all shadow-ca-sm hover:shadow-ca-md"
-                >
-                  + New Project
-                </a>
-              </div>
+              <h3 class="text-lg font-semibold text-text-primary">Loading projects...</h3>
             </div>
           }
         >
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <For each={filteredProjects()}>
-              {(project) => (
-                <ProjectHealthCard project={project} />
-              )}
-            </For>
-          </div>
+          <Show
+            when={dbProjects().length > 0}
+            fallback={
+              <div class="text-center py-16 bg-white rounded shadow-ca-sm border border-gray-200">
+                <div class="flex justify-center mb-4">
+                  <div class="bg-gray-100 rounded-full p-4">
+                    <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                  </div>
+                </div>
+                <h3 class="text-lg font-semibold text-text-primary">No projects found</h3>
+                <p class="mt-2 text-text-secondary">
+                  {searchTerm() || statusFilter() !== 'all' || archivedFilter() !== 'false' || minBudget() || maxBudget()
+                    ? 'Try adjusting your filters to see more results.'
+                    : 'Get started by creating a new project.'}
+                </p>
+                <div class="mt-6">
+                  <Show when={searchTerm() || statusFilter() !== 'all' || archivedFilter() !== 'false' || minBudget() || maxBudget()}>
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setStatusFilter('all');
+                        setArchivedFilter('false');
+                        setMinBudget('');
+                        setMaxBudget('');
+                        fetchProjects();
+                      }}
+                      class="inline-flex items-center bg-gray-600 hover:bg-gray-700 text-white px-5 py-2.5 rounded font-medium transition-all shadow-ca-sm hover:shadow-ca-md mr-3"
+                    >
+                      Clear Filters
+                    </button>
+                  </Show>
+                  <a
+                    href="/projects/new"
+                    class="inline-flex items-center bg-ca-orange hover:bg-ca-orange-dark text-white px-5 py-2.5 rounded font-medium transition-all shadow-ca-sm hover:shadow-ca-md"
+                  >
+                    + New Project
+                  </a>
+                </div>
+              </div>
+            }
+          >
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <For each={dbProjects()}>
+                {(project) => (
+                  <ProjectHealthCard project={project} onArchiveToggle={() => fetchProjects()} />
+                )}
+              </For>
+            </div>
+          </Show>
         </Show>
 
         {/* Footer Count */}
-        <div class="mt-6 text-center">
-          <p class="text-sm text-text-secondary">
-            Showing <span class="font-medium text-text-primary">{filteredProjects().length}</span> of <span class="font-medium text-text-primary">{dbProjects().length}</span> projects
-          </p>
-        </div>
+        <Show when={!loading()}>
+          <div class="mt-6 text-center">
+            <p class="text-sm text-text-secondary">
+              Showing <span class="font-medium text-text-primary">{dbProjects().length}</span> of <span class="font-medium text-text-primary">{totalCount()}</span> projects
+            </p>
+          </div>
+        </Show>
       </div>
     </div>
   );
@@ -236,6 +379,7 @@ export function NewProjectForm() {
     const data = formData();
 
     // Create project payload for API
+    // Note: createdBy and generalContractorId are set server-side from authenticated user
     const projectData = {
       name: data.name,
       description: data.description,
@@ -247,8 +391,6 @@ export function NewProjectForm() {
       state: '', // Could parse from location
       startDate: data.startDate,
       estimatedCompletion: data.endDate || null,
-      createdBy: 1, // Mock user ID (GC)
-      generalContractorId: 1
     };
 
     try {

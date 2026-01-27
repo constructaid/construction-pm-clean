@@ -15,11 +15,27 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const endpoint = context.url.pathname;
 
   // Development Mode Bypass
-  // SECURITY: Only allow bypass in development mode AND when explicitly enabled
-  // This prevents accidental bypass in production even if env var is misconfigured
-  const isDevelopment = import.meta.env.DEV || process.env.NODE_ENV === 'development';
-  const bypassRequested = import.meta.env.PUBLIC_DEV_BYPASS_AUTH === 'true' || process.env.DEV_BYPASS_AUTH === 'true';
-  const bypassAuth = isDevelopment && bypassRequested;
+  // SECURITY: Multiple layers of protection to prevent bypass in production:
+  // 1. Check import.meta.env.DEV (build-time flag)
+  // 2. Check NODE_ENV !== 'production' (runtime flag)
+  // 3. Check import.meta.env.PROD is not true (build-time production flag)
+  // 4. Require explicit opt-in via DEV_BYPASS_AUTH env var
+  const isProduction = import.meta.env.PROD === true || process.env.NODE_ENV === 'production';
+  const isDevelopment = !isProduction && (import.meta.env.DEV === true || process.env.NODE_ENV === 'development');
+  const bypassRequested = process.env.DEV_BYPASS_AUTH === 'true';
+
+  // CRITICAL: Never allow bypass in production, even if bypass is requested
+  const bypassAuth = isDevelopment && bypassRequested && !isProduction;
+
+  if (isProduction && bypassRequested) {
+    // Log security warning - someone tried to enable bypass in production
+    logger.error('SECURITY: DEV_BYPASS_AUTH attempted in production - BLOCKED', {
+      module: 'middleware',
+      endpoint,
+      nodeEnv: process.env.NODE_ENV,
+      isProd: import.meta.env.PROD,
+    });
+  }
 
   if (bypassAuth) {
     context.locals.user = {

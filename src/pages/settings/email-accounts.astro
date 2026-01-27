@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import EmailAccountsManager from '../../components/settings/EmailAccountsManager';
+
+const title = 'Email Accounts';
+---
+
+<Layout title={title}>
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Email Accounts</h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">
+          Connect your email accounts to automatically sync construction-related emails and attachments
+        </p>
+      </div>
+
+      <EmailAccountsManager client:load />
+    </div>
+  </div>
+</Layout>

@@ -4,8 +4,9 @@
  * Authenticates user credentials and returns JWT tokens
  * Sets HTTP-only cookies for security
  *
- * NOTE: Audit logging temporarily disabled to avoid schema conflicts
- * TODO: Add proper audit logging after schema alignment
+ * SECURITY: Rate limited to prevent brute force attacks
+ * - 5 attempts per 15 minutes per IP+email combination
+ * - 30 minute block after exceeding limit
  */
 
 import type { APIRoute } from 'astro';
@@ -16,11 +17,13 @@ import bcrypt from 'bcryptjs';
 import { generateTokenPair } from '../../lib/auth/jwt';
 import { getSessionManager } from '../../lib/auth/session-manager';
 import { setCSRFCookie } from '../../lib/auth/csrf';
-
-// Rate limiting map (in-memory for now)
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_LOGIN_ATTEMPTS = 5;
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+import {
+  getRateLimitKey,
+  checkRateLimit,
+  rateLimitResponse,
+  resetRateLimit,
+  RATE_LIMIT_CONFIGS,
+} from '../../lib/security/rate-limiter';
 
 export const POST: APIRoute = async (context) => {
   const { request, clientAddress, cookies } = context;
@@ -42,30 +45,13 @@ export const POST: APIRoute = async (context) => {
       );
     }
 
-    // Check rate limiting
-    const now = Date.now();
-    const attempts = loginAttempts.get(clientAddress) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW };
+    // Check rate limiting (using both IP and email to prevent distributed attacks)
+    const rateLimitKey = getRateLimitKey(request, email, 'login');
+    const rateLimitResult = checkRateLimit(rateLimitKey, RATE_LIMIT_CONFIGS.login);
 
-    if (attempts.resetAt < now) {
-      // Reset the counter
-      attempts.count = 0;
-      attempts.resetAt = now + RATE_LIMIT_WINDOW;
-    }
-
-    if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
-      const waitMinutes = Math.ceil((attempts.resetAt - now) / 60000);
-      console.log(`[AUTH] Rate limit exceeded for ${clientAddress}`);
-
-      return new Response(
-        JSON.stringify({
-          error: 'Too many attempts',
-          message: `Too many login attempts. Please try again in ${waitMinutes} minutes`,
-        }),
-        {
-          status: 429,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+    if (!rateLimitResult.allowed) {
+      console.log(`[AUTH] Rate limit exceeded for ${clientAddress} / ${email}`);
+      return rateLimitResponse(rateLimitResult);
     }
 
     // Find user by email
@@ -76,9 +62,7 @@ export const POST: APIRoute = async (context) => {
       .limit(1);
 
     if (!user) {
-      // Increment attempts for non-existent user (prevent email enumeration timing attack)
-      attempts.count++;
-      loginAttempts.set(clientAddress, attempts);
+      // Rate limit is already tracked by the rate limiter
       console.log(`[AUTH] Login failed - user not found: ${email}`);
 
       // Return generic error to prevent email enumeration
@@ -96,8 +80,6 @@ export const POST: APIRoute = async (context) => {
 
     // Check if password hash exists
     if (!user.password) {
-      attempts.count++;
-      loginAttempts.set(clientAddress, attempts);
       console.log(`[AUTH] Login failed - no password hash for user ${user.id}`);
 
       return new Response(
@@ -116,8 +98,6 @@ export const POST: APIRoute = async (context) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
-      attempts.count++;
-      loginAttempts.set(clientAddress, attempts);
       console.log(`[AUTH] Login failed - invalid password for user ${user.id}`);
 
       return new Response(
@@ -148,8 +128,8 @@ export const POST: APIRoute = async (context) => {
       );
     }
 
-    // Success! Clear rate limiting for this IP
-    loginAttempts.delete(clientAddress);
+    // Success! Clear rate limiting for this IP+email combination
+    resetRateLimit(rateLimitKey);
     console.log(`[AUTH] Login successful for user ${user.id} (${user.email})`);
 
     // Check email verification status

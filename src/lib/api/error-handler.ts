@@ -380,36 +380,33 @@ export function requirePermission(context: APIContext, permission: string): void
 // RATE LIMITING HELPER
 // ========================================
 
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+import {
+  checkRateLimit as checkRateLimitImpl,
+  type RateLimitResult,
+} from '../security/rate-limiter';
 
 /**
  * Simple in-memory rate limiting
- * For production, use Redis or similar
+ * Throws APIError if rate limit exceeded
+ *
+ * For more comprehensive rate limiting, use the rate-limiter module directly
  */
 export function checkRateLimit(
   identifier: string,
   maxRequests: number = 100,
   windowMs: number = 60000
 ): void {
-  const now = Date.now();
-  const record = rateLimitStore.get(identifier);
+  const result = checkRateLimitImpl(identifier, {
+    windowMs,
+    maxRequests,
+    blockDurationMs: windowMs, // Block for same duration as window
+  });
 
-  if (!record || now > record.resetAt) {
-    // New window
-    rateLimitStore.set(identifier, {
-      count: 1,
-      resetAt: now + windowMs,
-    });
-    return;
-  }
-
-  if (record.count >= maxRequests) {
+  if (!result.allowed) {
     throw new APIError('Too many requests', 429, 'RATE_LIMIT_EXCEEDED', {
-      retryAfter: Math.ceil((record.resetAt - now) / 1000),
+      retryAfter: result.retryAfter,
     });
   }
-
-  record.count++;
 }
 
 // ========================================

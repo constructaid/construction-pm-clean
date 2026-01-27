@@ -433,9 +433,9 @@ const ContactDetailView: Component<ContactDetailProps> = (props) => {
                               <p>Issued: {formatDate(doc.issueDate)}</p>
                             </Show>
                             <Show when={doc.expirationDate}>
-                              <p class={new Date(doc.expirationDate) < new Date() ? 'text-red-600 font-semibold' : ''}>
+                              <p class={doc.expirationDate && new Date(doc.expirationDate) < new Date() ? 'text-red-600 font-semibold' : ''}>
                                 Expires: {formatDate(doc.expirationDate)}
-                                {new Date(doc.expirationDate) < new Date() && ' (EXPIRED)'}
+                                {doc.expirationDate && new Date(doc.expirationDate) < new Date() && ' (EXPIRED)'}
                               </p>
                             </Show>
                           </div>

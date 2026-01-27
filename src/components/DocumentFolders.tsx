@@ -5,7 +5,6 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import { FolderType, getFolderDisplayName, getFolderIcon } from '../lib/db/schemas/Document';
 import FileUpload from './FileUpload';
-import CSIDropdown from './CSIDropdown.astro';
 
 interface DocumentFoldersProps {
   projectId: string;

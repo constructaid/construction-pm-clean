@@ -1,183 +1,331 @@
 /**
- * Project Team API
- * Manage project team members and their contact information
+ * Project Team Management API Endpoint
+ * GET /api/projects/[id]/team - List all team members for a project
+ * POST /api/projects/[id]/team - Add a new team member
+ * PUT /api/projects/[id]/team - Update team member
+ * DELETE /api/projects/[id]/team - Remove team member (soft delete)
+ *
+ * RBAC: All endpoints use checkRBAC middleware
+ * - GET requires canRead permission
+ * - POST/PUT/DELETE require canManageTeam permission
  */
-
 import type { APIRoute } from 'astro';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { db } from '../../../../lib/db/index';
+import { projectTeamMembers, users } from '../../../../lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { projectTeamMembers } from '../../../../lib/db/project-team-schema';
+import { checkRBAC } from '../../../../lib/middleware/rbac';
 
-const databaseUrl = import.meta.env.DATABASE_URL;
+export const prerender = false;
 
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is not set');
-}
+// ========================================
+// GET - List all team members
+// ========================================
 
-const sqlClient = neon(databaseUrl);
-const db = drizzle(sqlClient);
+export const GET: APIRoute = async (context) => {
+  const { id } = context.params;
+  const projectId = parseInt(id!);
 
-/**
- * GET - Get all team members for a project
- */
-export const GET: APIRoute = async ({ params }) => {
-  try {
-    const projectId = parseInt(params.id!);
+  // Check RBAC - requires canRead permission
+  const rbacResult = await checkRBAC(context, projectId, 'canRead');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
 
-    const teamMembers = await db
-      .select()
-      .from(projectTeamMembers)
-      .where(eq(projectTeamMembers.projectId, projectId))
-      .orderBy(projectTeamMembers.role);
+  console.log('[GET /api/projects/:id/team] Fetching team for project:', projectId);
 
-    return new Response(JSON.stringify(teamMembers), {
+  // Fetch all active team members with user details
+  const members = await db
+    .select({
+      id: projectTeamMembers.id,
+      userId: projectTeamMembers.userId,
+      teamRole: projectTeamMembers.teamRole,
+      companyName: projectTeamMembers.companyName,
+      contactName: projectTeamMembers.contactName,
+      contactEmail: projectTeamMembers.contactEmail,
+      contactPhone: projectTeamMembers.contactPhone,
+      accessLevel: projectTeamMembers.accessLevel,
+      canInviteOthers: projectTeamMembers.canInviteOthers,
+      csiDivision: projectTeamMembers.csiDivision,
+      divisionName: projectTeamMembers.divisionName,
+      scopeOfWork: projectTeamMembers.scopeOfWork,
+      isActive: projectTeamMembers.isActive,
+      joinedAt: projectTeamMembers.joinedAt,
+      // User details
+      userEmail: users.email,
+      userFirstName: users.firstName,
+      userLastName: users.lastName,
+      userRole: users.role,
+    })
+    .from(projectTeamMembers)
+    .leftJoin(users, eq(projectTeamMembers.userId, users.id))
+    .where(
+      and(
+        eq(projectTeamMembers.projectId, projectId),
+        eq(projectTeamMembers.isActive, true)
+      )
+    )
+    .orderBy(projectTeamMembers.joinedAt);
+
+  return new Response(
+    JSON.stringify({
+      members,
+      total: members.length,
+    }),
+    {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Error fetching team members:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch team members' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    }
+  );
 };
 
-/**
- * POST - Add a team member to the project
- */
-export const POST: APIRoute = async ({ params, request }) => {
-  try {
-    const projectId = parseInt(params.id!);
-    const body = await request.json();
+// ========================================
+// POST - Add new team member
+// ========================================
 
-    const newMember = await db.insert(projectTeamMembers).values({
-      projectId: projectId,
-      role: body.role,
-      roleTitle: body.roleTitle,
-      firstName: body.firstName,
-      lastName: body.lastName,
-      fullName: body.fullName || `${body.firstName || ''} ${body.lastName || ''}`.trim(),
-      company: body.company,
-      title: body.title,
-      email: body.email,
-      phoneMain: body.phoneMain,
-      phoneMobile: body.phoneMobile,
-      phoneOffice: body.phoneOffice,
-      address: body.address,
-      city: body.city,
-      state: body.state,
-      zipCode: body.zipCode,
+export const POST: APIRoute = async (context) => {
+  const { id } = context.params;
+  const projectId = parseInt(id!);
+
+  // Check RBAC - requires canManageTeam permission
+  const rbacResult = await checkRBAC(context, projectId, 'canManageTeam');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const body = await context.request.json();
+
+  console.log('[POST /api/projects/:id/team] Adding team member:', body);
+
+  // Validate required fields
+  const requiredFields = ['userId', 'teamRole', 'companyName', 'contactName', 'contactEmail'];
+  for (const field of requiredFields) {
+    if (!body[field]) {
+      return new Response(
+        JSON.stringify({
+          error: 'Validation failed',
+          message: `Missing required field: ${field}`,
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  }
+
+  // Check if user is already a team member
+  const existing = await db
+    .select()
+    .from(projectTeamMembers)
+    .where(
+      and(
+        eq(projectTeamMembers.projectId, projectId),
+        eq(projectTeamMembers.userId, body.userId),
+        eq(projectTeamMembers.isActive, true)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    return new Response(
+      JSON.stringify({
+        error: 'Conflict',
+        message: 'User is already a member of this project team',
+      }),
+      {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  // Insert new team member
+  const [newMember] = await db
+    .insert(projectTeamMembers)
+    .values({
+      projectId,
       userId: body.userId,
-      contactId: body.contactId,
-      isPrimary: body.isPrimary || false,
-      isActive: body.isActive !== undefined ? body.isActive : true,
-      notes: body.notes,
-      responsibilities: body.responsibilities,
-      createdBy: body.createdBy,
-    }).returning();
+      teamRole: body.teamRole,
+      companyName: body.companyName,
+      contactName: body.contactName,
+      contactEmail: body.contactEmail,
+      contactPhone: body.contactPhone || null,
+      accessLevel: body.accessLevel || 'standard',
+      canInviteOthers: body.canInviteOthers || false,
+      csiDivision: body.csiDivision || null,
+      divisionName: body.divisionName || null,
+      scopeOfWork: body.scopeOfWork || null,
+      isActive: true,
+    })
+    .returning();
 
-    return new Response(JSON.stringify(newMember[0]), {
+  return new Response(
+    JSON.stringify({
+      message: 'Team member added successfully',
+      member: newMember,
+    }),
+    {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Error adding team member:', error);
-    return new Response(JSON.stringify({ error: 'Failed to add team member' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    }
+  );
 };
 
-/**
- * PUT - Update a team member
- */
-export const PUT: APIRoute = async ({ params, request }) => {
-  try {
-    const projectId = parseInt(params.id!);
-    const body = await request.json();
-    const { memberId, ...updates } = body;
+// ========================================
+// PUT - Update team member
+// ========================================
 
-    if (!memberId) {
-      return new Response(JSON.stringify({ error: 'memberId is required' }), {
+export const PUT: APIRoute = async (context) => {
+  const { id } = context.params;
+  const projectId = parseInt(id!);
+
+  // Check RBAC - requires canManageTeam permission
+  const rbacResult = await checkRBAC(context, projectId, 'canManageTeam');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const body = await context.request.json();
+  const { memberId, ...updateData } = body;
+
+  if (!memberId) {
+    return new Response(
+      JSON.stringify({
+        error: 'Validation failed',
+        message: 'Missing required field: memberId',
+      }),
+      {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }
+    );
+  }
 
-    const updated = await db
-      .update(projectTeamMembers)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(and(
+  console.log('[PUT /api/projects/:id/team] Updating member:', memberId);
+
+  // Check if member exists
+  const [existing] = await db
+    .select()
+    .from(projectTeamMembers)
+    .where(
+      and(
         eq(projectTeamMembers.id, memberId),
-        eq(projectTeamMembers.projectId, projectId)
-      ))
-      .returning();
+        eq(projectTeamMembers.projectId, projectId),
+        eq(projectTeamMembers.isActive, true)
+      )
+    )
+    .limit(1);
 
-    if (updated.length === 0) {
-      return new Response(JSON.stringify({ error: 'Team member not found' }), {
+  if (!existing) {
+    return new Response(
+      JSON.stringify({
+        error: 'Not found',
+        message: 'Team member not found',
+      }),
+      {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }
+    );
+  }
 
-    return new Response(JSON.stringify(updated[0]), {
+  // Update team member
+  const [updated] = await db
+    .update(projectTeamMembers)
+    .set({
+      ...updateData,
+      updatedAt: new Date(),
+    })
+    .where(eq(projectTeamMembers.id, memberId))
+    .returning();
+
+  return new Response(
+    JSON.stringify({
+      message: 'Team member updated successfully',
+      member: updated,
+    }),
+    {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Error updating team member:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update team member' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    }
+  );
 };
 
-/**
- * DELETE - Remove a team member
- */
-export const DELETE: APIRoute = async ({ params, url }) => {
-  try {
-    const projectId = parseInt(params.id!);
-    const memberId = url.searchParams.get('memberId');
+// ========================================
+// DELETE - Remove team member (soft delete)
+// ========================================
 
-    if (!memberId) {
-      return new Response(JSON.stringify({ error: 'memberId query parameter is required' }), {
+export const DELETE: APIRoute = async (context) => {
+  const { id } = context.params;
+  const projectId = parseInt(id!);
+
+  // Check RBAC - requires canManageTeam permission
+  const rbacResult = await checkRBAC(context, projectId, 'canManageTeam');
+  if (rbacResult instanceof Response) {
+    return rbacResult;
+  }
+
+  const url = new URL(context.request.url);
+  const memberId = url.searchParams.get('memberId');
+
+  if (!memberId) {
+    return new Response(
+      JSON.stringify({
+        error: 'Validation failed',
+        message: 'Missing required parameter: memberId',
+      }),
+      {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }
+    );
+  }
 
-    const deleted = await db
-      .delete(projectTeamMembers)
-      .where(and(
+  console.log('[DELETE /api/projects/:id/team] Removing member:', memberId);
+
+  // Check if member exists
+  const [existing] = await db
+    .select()
+    .from(projectTeamMembers)
+    .where(
+      and(
         eq(projectTeamMembers.id, parseInt(memberId)),
-        eq(projectTeamMembers.projectId, projectId)
-      ))
-      .returning();
+        eq(projectTeamMembers.projectId, projectId),
+        eq(projectTeamMembers.isActive, true)
+      )
+    )
+    .limit(1);
 
-    if (deleted.length === 0) {
-      return new Response(JSON.stringify({ error: 'Team member not found' }), {
+  if (!existing) {
+    return new Response(
+      JSON.stringify({
+        error: 'Not found',
+        message: 'Team member not found',
+      }),
+      {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
-      });
-    }
+      }
+    );
+  }
 
-    return new Response(JSON.stringify({ message: 'Team member removed successfully' }), {
+  // Soft delete - set isActive to false
+  await db
+    .update(projectTeamMembers)
+    .set({
+      isActive: false,
+      updatedAt: new Date(),
+    })
+    .where(eq(projectTeamMembers.id, parseInt(memberId)));
+
+  return new Response(
+    JSON.stringify({
+      message: 'Team member removed successfully',
+      note: 'Member can be restored if needed',
+    }),
+    {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Error deleting team member:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete team member' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    }
+  );
 };

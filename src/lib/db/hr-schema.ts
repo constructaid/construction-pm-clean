@@ -10,7 +10,7 @@ export const employmentStatusEnum = pgEnum('employment_status', ['active', 'on_l
 export const departmentEnum = pgEnum('department', ['executive', 'project_management', 'field_operations', 'estimating', 'safety', 'quality', 'accounting', 'hr', 'it']);
 export const ptoTypeEnum = pgEnum('pto_type', ['vacation', 'sick', 'personal', 'bereavement', 'jury_duty', 'unpaid']);
 export const ptoStatusEnum = pgEnum('pto_status', ['pending', 'approved', 'denied', 'cancelled']);
-export const certificationStatusEnum = pgEnum('certification_status', ['active', 'expiring_soon', 'expired', 'pending_renewal']);
+export const hrCertificationStatusEnum = pgEnum('hr_certification_status', ['active', 'expiring_soon', 'expired', 'pending_renewal']);
 
 // ========================================
 // EMPLOYEES TABLE
@@ -172,7 +172,7 @@ export const certifications = pgTable('certifications', {
   renewalDate: date('renewal_date'),
 
   // Status
-  status: certificationStatusEnum('status').notNull().default('active'),
+  status: hrCertificationStatusEnum('status').notNull().default('active'),
   isRequired: boolean('is_required').default(false), // Required for job role
 
   // Documents

@@ -26,7 +26,9 @@ import {
   sanitizeForAudit,
 } from '../../lib/api/audit-logger';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import { generateTokenPair } from '../../lib/auth/jwt';
+import { generateVerificationToken, storeVerificationTokenInDB } from '../../lib/auth/email-verification';
+import { getEmailService } from '../../lib/services/email-service';
 
 export const prerender = false;
 
@@ -58,9 +60,6 @@ export const POST: APIRoute = apiHandler(async (context) => {
   // Hash password with bcrypt (cost factor 12 for strong security)
   const passwordHash = await bcrypt.hash(data.password, 12);
 
-  // Generate email verification token
-  const emailVerificationToken = crypto.randomBytes(32).toString('hex');
-
   // Create new user with validated data
   const newUser = {
     email: data.email.toLowerCase().trim(),
@@ -73,7 +72,7 @@ export const POST: APIRoute = apiHandler(async (context) => {
     phone: data.phone || null,
     avatar: null,
     emailVerified: false,
-    emailVerificationToken,
+    emailVerificationToken: null, // Will be set below
   };
 
   // Insert user
@@ -81,10 +80,26 @@ export const POST: APIRoute = apiHandler(async (context) => {
 
   console.log('User registered successfully:', result.id, result.email);
 
-  // TODO: Send verification email
-  // This would typically use a service like SendGrid, AWS SES, or Nodemailer
-  console.log(`[EMAIL] Verification token for ${result.email}: ${emailVerificationToken}`);
-  console.log(`[EMAIL] Verification link: ${context.url.origin}/verify-email?token=${emailVerificationToken}`);
+  // Generate email verification token
+  const verificationToken = generateVerificationToken(result.id, result.email);
+
+  // Store token in database for persistence
+  await storeVerificationTokenInDB(result.id, verificationToken.token);
+
+  // Send verification email
+  try {
+    const appUrl = process.env.APP_URL || context.url.origin;
+    const emailService = getEmailService();
+    await emailService.sendVerificationEmail(
+      result.email,
+      verificationToken.token,
+      appUrl
+    );
+    console.log(`[EMAIL] Verification email sent to ${result.email}`);
+  } catch (error) {
+    console.error('[EMAIL] Failed to send verification email:', error);
+    // Don't fail registration if email fails - user can resend later
+  }
 
   // Log the registration to audit log
   const auditContext = createAuditContext(context, {
@@ -109,8 +124,17 @@ export const POST: APIRoute = apiHandler(async (context) => {
     'User registered via API'
   ).catch(err => console.error('[AUDIT] Failed to log registration:', err));
 
-  // Return success response (without sensitive data)
+  // Generate JWT tokens for immediate login
+  const { accessToken, refreshToken } = generateTokenPair({
+    id: result.id,
+    email: result.email,
+    role: result.role,
+    companyId: null,
+  });
+
+  // Return success response with tokens (without sensitive data)
   return {
+    success: true,
     message: 'Registration successful. Please check your email to verify your account.',
     userId: result.id,
     user: {
@@ -120,6 +144,9 @@ export const POST: APIRoute = apiHandler(async (context) => {
       lastName: result.lastName,
       role: result.role,
       status: result.status,
+      company: result.company,
     },
+    accessToken,
+    refreshToken,
   };
 });

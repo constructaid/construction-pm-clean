@@ -69,10 +69,16 @@ export function permanentlyDeleteOld<T extends PgTable>(
   table: T,
   daysOld: number = 2555 // 7 years for construction document retention
 ): SQL {
+  // SECURITY: Validate that daysOld is a positive integer to prevent injection
+  const safeDays = Math.max(1, Math.floor(Number(daysOld) || 2555));
+  if (!Number.isFinite(safeDays) || safeDays < 1) {
+    throw new Error('Invalid daysOld parameter: must be a positive number');
+  }
+
   return sql`
     DELETE FROM ${table}
     WHERE deleted_at IS NOT NULL
-    AND deleted_at < NOW() - INTERVAL '${sql.raw(daysOld.toString())} days'
+    AND deleted_at < NOW() - INTERVAL '${sql.raw(safeDays.toString())} days'
   `;
 }
 

@@ -1,0 +1,175 @@
+---
+/**
+ * Main Settings Page
+ * Central hub for all company and user settings
+ */
+import Layout from '../../layouts/Layout.astro';
+import { theme } from '../../lib/config/theme';
+
+export const prerender = false;
+
+const settingsSections = [
+  {
+    title: 'Company',
+    description: 'Manage your company information and details',
+    icon: '🏢',
+    links: [
+      { name: 'Company Profile', href: '/settings/company', description: 'Basic company information' },
+      { name: 'Branding', href: '/settings/branding', description: 'Logo, colors, and white-label settings' },
+      { name: 'Billing', href: '/settings/billing', description: 'Subscription and payment methods' },
+    ]
+  },
+  {
+    title: 'Team & Access',
+    description: 'Manage users, roles, and permissions',
+    icon: '👥',
+    links: [
+      { name: 'Users', href: '/admin/users', description: 'Manage team members and invitations' },
+      { name: 'Roles & Permissions', href: '/settings/permissions', description: 'Configure access control' },
+      { name: 'Modules', href: '/settings/modules', description: 'Add-on features and subscriptions' },
+    ]
+  },
+  {
+    title: 'Preferences',
+    description: 'Personal and system preferences',
+    icon: '⚙️',
+    links: [
+      { name: 'Account', href: '/settings/account', description: 'Your personal account settings' },
+      { name: 'Notifications', href: '/settings/notifications', description: 'Email and push notification settings' },
+      { name: 'Integrations', href: '/settings/integrations', description: 'Third-party apps and services' },
+    ]
+  },
+  {
+    title: 'System',
+    description: 'Advanced settings and configurations',
+    icon: '🔧',
+    links: [
+      { name: 'API Keys', href: '/settings/api-keys', description: 'Manage API access tokens' },
+      { name: 'Webhooks', href: '/settings/webhooks', description: 'Configure event webhooks' },
+      { name: 'Security', href: '/settings/security', description: 'Two-factor auth and security logs' },
+    ]
+  },
+];
+---
+
+<Layout title="Settings - ConstructHub">
+  <div class={`min-h-screen ${theme.pageBg} py-8 px-4`}>
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+          <svg class="h-8 w-8 text-ca-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <h1 class={`text-4xl font-bold ${theme.textHeading}`}>Settings</h1>
+        </div>
+        <p class={`text-lg ${theme.textMuted}`}>
+          Manage your company, team, and system preferences
+        </p>
+      </div>
+
+      <!-- Settings Sections Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {settingsSections.map((section) => (
+          <div class={`${theme.cardBg} ${theme.border} rounded-xl shadow-lg p-6`}>
+            <!-- Section Header -->
+            <div class="flex items-start gap-4 mb-6">
+              <div class="text-4xl">{section.icon}</div>
+              <div>
+                <h2 class={`text-2xl font-bold ${theme.textHeading} mb-1`}>{section.title}</h2>
+                <p class={`text-sm ${theme.textMuted}`}>{section.description}</p>
+              </div>
+            </div>
+
+            <!-- Section Links -->
+            <div class="space-y-3">
+              {section.links.map((link) => (
+                <a
+                  href={link.href}
+                  class={`block p-4 ${theme.inputBg} ${theme.border} rounded-lg hover:border-ca-orange transition-all group`}
+                >
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class={`font-semibold ${theme.textHeading} group-hover:text-ca-orange transition-colors`}>
+                        {link.name}
+                      </h3>
+                      <p class={`text-sm ${theme.textMuted} mt-1`}>{link.description}</p>
+                    </div>
+                    <svg class="h-5 w-5 text-gray-400 group-hover:text-ca-orange transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="mt-12">
+        <div class={`${theme.cardBg} ${theme.border} rounded-xl shadow-lg p-8`}>
+          <h2 class={`text-2xl font-bold ${theme.textHeading} mb-6`}>Quick Actions</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a
+              href="/settings/branding"
+              class="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all shadow-md hover:shadow-lg"
+            >
+              <span class="text-2xl">🎨</span>
+              <div>
+                <div class="font-semibold">Customize Branding</div>
+                <div class="text-xs text-purple-100">Logo & colors</div>
+              </div>
+            </a>
+            <a
+              href="/admin/users"
+              class="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all shadow-md hover:shadow-lg"
+            >
+              <span class="text-2xl">👥</span>
+              <div>
+                <div class="font-semibold">Invite Team Members</div>
+                <div class="text-xs text-blue-100">Add users</div>
+              </div>
+            </a>
+            <a
+              href="/settings/modules"
+              class="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition-all shadow-md hover:shadow-lg"
+            >
+              <span class="text-2xl">⚡</span>
+              <div>
+                <div class="font-semibold">Manage Modules</div>
+                <div class="text-xs text-green-100">Add-on features</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Section -->
+      <div class="mt-8">
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">💡</div>
+            <div>
+              <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">
+                Need Help?
+              </h3>
+              <p class="text-blue-800 dark:text-blue-400 mb-4">
+                Check out our documentation or contact support for assistance with settings and configuration.
+              </p>
+              <div class="flex gap-3">
+                <a href="#" class="text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline">
+                  View Documentation
+                </a>
+                <a href="mailto:support@constructaid.com" class="text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 underline">
+                  Contact Support
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

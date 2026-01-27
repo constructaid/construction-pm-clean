@@ -80,6 +80,12 @@ export function Navbar() {
                 Projects
               </a>
               <a
+                href="/portfolio"
+                class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-ca-orange hover:bg-gray-800 rounded transition-all"
+              >
+                Portfolio
+              </a>
+              <a
                 href="/ai-workspace"
                 class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-ca-orange hover:bg-gray-800 rounded transition-all flex items-center gap-2"
               >

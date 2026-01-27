@@ -6,7 +6,9 @@ import { createSignal } from 'solid-js';
 import { useTranslation } from '../../i18n/useTranslation';
 
 interface ChangeOrderFormProps {
-  projectId: string;
+  projectId: number;
+  projectInfo?: any;
+  changeOrderNumber?: string;
   onSuccess?: (changeOrder: any) => void;
   onCancel?: () => void;
 }
@@ -70,7 +72,7 @@ export default function ChangeOrderForm(props: ChangeOrderFormProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          projectId: parseInt(props.projectId),
+          projectId: props.projectId,
           title: data.title,
           description: data.description,
           reason: data.reason,

@@ -2,9 +2,24 @@
  * Zod Validation Schemas
  * Comprehensive input validation for all API endpoints
  * Priority: P0 - Critical for security and data integrity
+ *
+ * SECURITY: Uses sanitization functions to prevent:
+ * - XSS attacks
+ * - SQL injection
+ * - Path traversal
+ * - Command injection
  */
 
 import { z } from 'zod';
+import {
+  escapeHtml,
+  sanitizeFilename,
+  sanitizePath,
+  hasSuspiciousContent,
+  sanitizeText,
+  sanitizeEmail,
+  sanitizeUrl,
+} from '../security/input-sanitizer';
 
 // ========================================
 // COMMON VALIDATION PATTERNS
@@ -49,13 +64,10 @@ export const dateSchema = z.coerce.date();
 export const sanitizedTextSchema = z
   .string()
   .trim()
-  .transform((val) => {
-    // Remove script tags and other dangerous content
-    return val
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, ''); // Remove inline event handlers
-  });
+  .refine((val) => !hasSuspiciousContent(val), {
+    message: 'Input contains potentially malicious content',
+  })
+  .transform((val) => sanitizeText(val, { maxLength: 10000 }));
 
 // Helper to create sanitized text with length constraints
 export const sanitizedText = (options?: { min?: number; max?: number }) => {
@@ -68,20 +80,29 @@ export const sanitizedText = (options?: { min?: number; max?: number }) => {
     base = base.max(options.max) as any;
   }
 
-  return base.transform((val) => {
-    // Remove script tags and other dangerous content
-    return val
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, ''); // Remove inline event handlers
-  });
+  return base
+    .refine((val) => !hasSuspiciousContent(val), {
+      message: 'Input contains potentially malicious content',
+    })
+    .transform((val) => sanitizeText(val, { maxLength: options?.max || 10000 }));
 };
 
 // File path validation (prevent directory traversal)
 export const safePathSchema = z
   .string()
   .regex(/^[a-zA-Z0-9_\-\.\/]+$/, 'Invalid file path')
-  .refine((path) => !path.includes('..'), 'Directory traversal not allowed');
+  .refine((path) => !path.includes('..'), 'Directory traversal not allowed')
+  .transform((path) => sanitizePath(path));
+
+// Safe filename validation
+export const safeFilenameSchema = z
+  .string()
+  .min(1, 'Filename is required')
+  .max(255, 'Filename too long')
+  .refine((name) => !name.includes('..') && !name.includes('/') && !name.includes('\\'), {
+    message: 'Invalid characters in filename',
+  })
+  .transform((name) => sanitizeFilename(name));
 
 // ========================================
 // USER VALIDATION SCHEMAS
@@ -274,7 +295,7 @@ export const createIncidentReportSchema = z.object({
 
 export const fileUploadSchema = z.object({
   projectId: positiveIntSchema,
-  fileName: z.string().min(1, 'File name is required').max(255),
+  fileName: safeFilenameSchema,
   fileSize: z.number().int().positive().max(100 * 1024 * 1024, 'File size cannot exceed 100MB'),
   mimeType: z.string().regex(/^[a-z]+\/[a-z0-9\-\+\.]+$/i, 'Invalid MIME type'),
   folderType: z.enum([

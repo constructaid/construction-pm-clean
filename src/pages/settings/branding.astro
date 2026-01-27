@@ -1,0 +1,252 @@
+---
+/**
+ * Company Branding Settings Page
+ * Allows companies to customize their brand colors and logo
+ */
+import Layout from '../../layouts/Layout.astro';
+import { theme } from '../../lib/config/theme';
+
+export const prerender = false;
+---
+
+<Layout title="Company Branding - ConstructHub">
+  <div class={`min-h-screen ${theme.pageBg} py-8 px-4`}>
+    <div class="max-w-4xl mx-auto">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class={`text-3xl font-bold ${theme.textHeading} mb-2`}>Company Branding</h1>
+        <p class={theme.textMuted}>Customize your company's logo and brand colors</p>
+      </div>
+
+      <!-- Branding Form -->
+      <div class={`${theme.cardBg} ${theme.border} rounded-lg shadow-lg p-6`}>
+        <!-- Logo Section -->
+        <div class="mb-8">
+          <h2 class={`text-xl font-semibold ${theme.textHeading} mb-4`}>Logo</h2>
+          <div class={`${theme.inputBg} ${theme.border} rounded-lg p-6 text-center`}>
+            <div id="logo-preview" class="mb-4">
+              <img
+                id="current-logo"
+                src="/ConstructHub-logo.png"
+                alt="Company Logo"
+                class="h-20 mx-auto"
+              />
+            </div>
+            <input
+              type="file"
+              id="logo-upload"
+              accept="image/*"
+              class="hidden"
+            />
+            <button
+              onclick="document.getElementById('logo-upload').click()"
+              class="px-6 py-2 bg-ca-orange text-white rounded-lg hover:bg-ca-orange-dark transition-all"
+            >
+              Upload New Logo
+            </button>
+            <p class={`text-sm ${theme.textMuted} mt-2`}>
+              Recommended: PNG or SVG, max 500KB
+            </p>
+          </div>
+        </div>
+
+        <!-- Brand Colors Section -->
+        <div class="mb-8">
+          <h2 class={`text-xl font-semibold ${theme.textHeading} mb-4`}>Brand Colors</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Primary Color -->
+            <div>
+              <label class={`block text-sm font-medium ${theme.textBody} mb-2`}>
+                Primary Color
+              </label>
+              <div class="flex items-center gap-3">
+                <input
+                  type="color"
+                  id="primary-color"
+                  value="#FF6600"
+                  class="h-12 w-12 rounded cursor-pointer border-2 border-gray-300"
+                />
+                <input
+                  type="text"
+                  id="primary-color-hex"
+                  value="#FF6600"
+                  class={`flex-1 px-3 py-2 ${theme.inputBg} ${theme.border} ${theme.textHeading} rounded-lg`}
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                  placeholder="#FF6600"
+                />
+              </div>
+              <p class={`text-xs ${theme.textMuted} mt-1`}>Main buttons, CTAs</p>
+            </div>
+
+            <!-- Secondary Color -->
+            <div>
+              <label class={`block text-sm font-medium ${theme.textBody} mb-2`}>
+                Secondary Color
+              </label>
+              <div class="flex items-center gap-3">
+                <input
+                  type="color"
+                  id="secondary-color"
+                  value="#3D9991"
+                  class="h-12 w-12 rounded cursor-pointer border-2 border-gray-300"
+                />
+                <input
+                  type="text"
+                  id="secondary-color-hex"
+                  value="#3D9991"
+                  class={`flex-1 px-3 py-2 ${theme.inputBg} ${theme.border} ${theme.textHeading} rounded-lg`}
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                  placeholder="#3D9991"
+                />
+              </div>
+              <p class={`text-xs ${theme.textMuted} mt-1`}>Status, success states</p>
+            </div>
+
+            <!-- Accent Color -->
+            <div>
+              <label class={`block text-sm font-medium ${theme.textBody} mb-2`}>
+                Accent Color
+              </label>
+              <div class="flex items-center gap-3">
+                <input
+                  type="color"
+                  id="accent-color"
+                  value="#4BAAD8"
+                  class="h-12 w-12 rounded cursor-pointer border-2 border-gray-300"
+                />
+                <input
+                  type="text"
+                  id="accent-color-hex"
+                  value="#4BAAD8"
+                  class={`flex-1 px-3 py-2 ${theme.inputBg} ${theme.border} ${theme.textHeading} rounded-lg`}
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                  placeholder="#4BAAD8"
+                />
+              </div>
+              <p class={`text-xs ${theme.textMuted} mt-1`}>Links, highlights</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="mb-8">
+          <h2 class={`text-xl font-semibold ${theme.textHeading} mb-4`}>Preview</h2>
+          <div class={`${theme.inputBg} ${theme.border} rounded-lg p-6`}>
+            <div class="flex gap-4">
+              <button id="preview-primary" class="px-6 py-2 text-white rounded-lg shadow-md" style="background-color: #FF6600;">
+                Primary Button
+              </button>
+              <button id="preview-secondary" class="px-6 py-2 text-white rounded-lg shadow-md" style="background-color: #3D9991;">
+                Secondary Button
+              </button>
+              <button id="preview-accent" class="px-6 py-2 text-white rounded-lg shadow-md" style="background-color: #4BAAD8;">
+                Accent Button
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end gap-4">
+          <a
+            href="/settings"
+            class={`px-6 py-2 ${theme.cardBg} ${theme.textBody} ${theme.border} rounded-lg hover:${theme.hoverBg} transition-all`}
+          >
+            Cancel
+          </a>
+          <button
+            id="save-branding"
+            class="px-6 py-2 bg-ca-orange text-white rounded-lg hover:bg-ca-orange-dark transition-all shadow-md"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+
+      <!-- Info Box -->
+      <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <p class="text-blue-900 dark:text-blue-300 text-sm">
+          <strong>💡 Pro Tip:</strong> Your brand colors will be applied to buttons, links, and other key interface elements throughout the application.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  // Sync color picker with hex input
+  function setupColorSync(colorId: string, hexId: string, previewId: string) {
+    const colorInput = document.getElementById(colorId) as HTMLInputElement;
+    const hexInput = document.getElementById(hexId) as HTMLInputElement;
+    const previewBtn = document.getElementById(previewId) as HTMLButtonElement;
+
+    colorInput?.addEventListener('input', (e) => {
+      const color = (e.target as HTMLInputElement).value;
+      if (hexInput) hexInput.value = color;
+      if (previewBtn) previewBtn.style.backgroundColor = color;
+    });
+
+    hexInput?.addEventListener('input', (e) => {
+      const hex = (e.target as HTMLInputElement).value;
+      if (/^#[0-9A-F]{6}$/i.test(hex)) {
+        if (colorInput) colorInput.value = hex;
+        if (previewBtn) previewBtn.style.backgroundColor = hex;
+      }
+    });
+  }
+
+  setupColorSync('primary-color', 'primary-color-hex', 'preview-primary');
+  setupColorSync('secondary-color', 'secondary-color-hex', 'preview-secondary');
+  setupColorSync('accent-color', 'accent-color-hex', 'preview-accent');
+
+  // Save branding
+  document.getElementById('save-branding')?.addEventListener('click', async () => {
+    const primaryColor = (document.getElementById('primary-color-hex') as HTMLInputElement)?.value;
+    const secondaryColor = (document.getElementById('secondary-color-hex') as HTMLInputElement)?.value;
+    const accentColor = (document.getElementById('accent-color-hex') as HTMLInputElement)?.value;
+
+    try {
+      const response = await fetch('/api/branding/1', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          primaryColor,
+          secondaryColor,
+          accentColor,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Branding settings saved successfully!');
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error saving branding:', error);
+      alert('Failed to save branding settings');
+    }
+  });
+
+  // Logo upload handler
+  document.getElementById('logo-upload')?.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    // Preview the image
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('current-logo') as HTMLImageElement;
+      if (img && e.target?.result) {
+        img.src = e.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
+
+    // TODO: Upload to server
+    // const formData = new FormData();
+    // formData.append('logo', file);
+    // await fetch('/api/branding/upload', { method: 'POST', body: formData });
+  });
+</script>

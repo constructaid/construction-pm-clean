@@ -30,6 +30,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.6",
+    "exceljs": "^4.4.0",
     "formidable": "^3.5.4",
     "i18next": "^25.6.2",
     "i18next-browser-languagedetector": "^8.2.0",
@@ -40,7 +41,6 @@
     "postgres": "^3.4.7",
     "solid-js": "^1.9.9",
     "tailwindcss": "^4.1.13",
-    "xlsx": "^0.18.5",
     "xrpl": "^4.4.2"
   },
   "optionalDependencies": {
