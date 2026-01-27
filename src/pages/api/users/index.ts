@@ -2,6 +2,7 @@
  * Users API Endpoint
  * GET /api/users - List all users (with filtering, pagination)
  * POST /api/users - Create a new user
+ * SECURED with RBAC middleware - Admin only
  */
 import type { APIRoute } from 'astro';
 import { db, users } from '../../../lib/db';
@@ -10,6 +11,8 @@ import {
   apiHandler,
   validateBody,
   checkRateLimit,
+  requireAuth,
+  ForbiddenError,
 } from '../../../lib/api/error-handler';
 import { excludeDeleted } from '../../../lib/db/soft-delete';
 import bcrypt from 'bcryptjs';
@@ -21,6 +24,15 @@ export const prerender = false;
 // ========================================
 
 export const GET: APIRoute = apiHandler(async (context) => {
+  // SECURITY: Require authentication and admin role
+  requireAuth(context);
+  const user = context.locals.user!;
+
+  // Only admins can list users
+  if (user.role !== 'ADMIN' && user.role !== 'GC') {
+    throw new ForbiddenError('Only administrators can list users');
+  }
+
   // Rate limiting
   checkRateLimit(`users-list-${context.clientAddress}`, 100, 60000);
 
@@ -111,12 +123,21 @@ export const GET: APIRoute = apiHandler(async (context) => {
 // ========================================
 
 export const POST: APIRoute = apiHandler(async (context) => {
+  // SECURITY: Require authentication and admin role
+  requireAuth(context);
+  const currentUser = context.locals.user!;
+
+  // Only admins can create users
+  if (currentUser.role !== 'ADMIN' && currentUser.role !== 'GC') {
+    throw new ForbiddenError('Only administrators can create users');
+  }
+
   // Rate limiting
   checkRateLimit(`users-create-${context.clientAddress}`, 10, 60000);
 
   const data = await context.request.json();
 
-  console.log('POST /api/users', 'Creating new user:', data.email);
+  console.log('POST /api/users', 'Creating new user:', data.email, 'by admin:', currentUser.id);
 
   // Validate required fields
   if (!data.email || !data.password || !data.firstName || !data.lastName || !data.role) {

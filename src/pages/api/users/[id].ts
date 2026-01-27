@@ -3,6 +3,7 @@
  * GET /api/users/[id] - Get user by ID
  * PUT /api/users/[id] - Update user
  * DELETE /api/users/[id] - Soft delete user
+ * SECURED with RBAC middleware - Admin or self only
  */
 import type { APIRoute } from 'astro';
 import { db, users } from '../../../lib/db';
@@ -11,6 +12,8 @@ import {
   apiHandler,
   NotFoundError,
   checkRateLimit,
+  requireAuth,
+  ForbiddenError,
 } from '../../../lib/api/error-handler';
 import { excludeDeleted, softDelete } from '../../../lib/db/soft-delete';
 import bcrypt from 'bcryptjs';
@@ -23,6 +26,16 @@ export const prerender = false;
 
 export const GET: APIRoute = apiHandler(async (context) => {
   const { id } = context.params;
+
+  // SECURITY: Require authentication
+  requireAuth(context);
+  const currentUser = context.locals.user!;
+
+  // Users can view themselves, admins can view anyone
+  const targetUserId = parseInt(id as string);
+  if (currentUser.id !== targetUserId && currentUser.role !== 'ADMIN' && currentUser.role !== 'GC') {
+    throw new ForbiddenError('You can only view your own profile');
+  }
 
   // Rate limiting
   checkRateLimit(`user-detail-${context.clientAddress}`, 200, 60000);
@@ -66,12 +79,30 @@ export const GET: APIRoute = apiHandler(async (context) => {
 export const PUT: APIRoute = apiHandler(async (context) => {
   const { id } = context.params;
 
+  // SECURITY: Require authentication
+  requireAuth(context);
+  const currentUser = context.locals.user!;
+
+  // Users can update themselves, admins can update anyone
+  const targetUserId = parseInt(id as string);
+  const isSelfUpdate = currentUser.id === targetUserId;
+  const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'GC';
+
+  if (!isSelfUpdate && !isAdmin) {
+    throw new ForbiddenError('You can only update your own profile');
+  }
+
   // Rate limiting
   checkRateLimit(`user-update-${context.clientAddress}`, 20, 60000);
 
   const data = await context.request.json();
 
-  console.log('PUT /api/users/' + id, 'Data:', data);
+  // Non-admins cannot change their own role or status
+  if (!isAdmin && (data.role !== undefined || data.status !== undefined)) {
+    throw new ForbiddenError('Only administrators can change user roles and status');
+  }
+
+  console.log('PUT /api/users/' + id, 'Data:', data, 'by user:', currentUser.id);
 
   // Check if user exists
   const [existing] = await db
@@ -143,17 +174,32 @@ export const PUT: APIRoute = apiHandler(async (context) => {
 export const DELETE: APIRoute = apiHandler(async (context) => {
   const { id } = context.params;
 
+  // SECURITY: Require authentication and admin role
+  requireAuth(context);
+  const currentUser = context.locals.user!;
+
+  // Only admins can delete users
+  if (currentUser.role !== 'ADMIN' && currentUser.role !== 'GC') {
+    throw new ForbiddenError('Only administrators can delete users');
+  }
+
+  // Prevent self-deletion
+  const targetUserId = parseInt(id as string);
+  if (currentUser.id === targetUserId) {
+    throw new ForbiddenError('You cannot delete your own account');
+  }
+
   // Rate limiting
   checkRateLimit(`user-delete-${context.clientAddress}`, 10, 60000);
 
-  console.log('DELETE /api/users/' + id);
+  console.log('DELETE /api/users/' + id, 'by admin:', currentUser.id);
 
   // Check if user exists
   const [existing] = await db
     .select()
     .from(users)
     .where(and(
-      eq(users.id, parseInt(id as string)),
+      eq(users.id, targetUserId),
       excludeDeleted()
     ))
     .limit(1);
@@ -163,12 +209,12 @@ export const DELETE: APIRoute = apiHandler(async (context) => {
   }
 
   // Soft delete the user
-  await softDelete(users, parseInt(id as string), 1); // TODO: Get actual admin user ID from context
+  await softDelete(users, targetUserId, currentUser.id);
 
   console.log('User soft-deleted successfully:', id);
 
   return {
     message: 'User deleted successfully',
-    userId: parseInt(id as string),
+    userId: targetUserId,
   };
 });
