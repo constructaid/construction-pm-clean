@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import EmailInboxViewer from '../../components/emails/EmailInboxViewer';
+
+const title = 'Email Inbox';
+---
+
+<Layout title={title}>
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Email Inbox</h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">
+          View and manage synced construction emails from connected accounts
+        </p>
+      </div>
+
+      <EmailInboxViewer client:load />
+    </div>
+  </div>
+</Layout>
