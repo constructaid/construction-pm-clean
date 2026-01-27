@@ -1,14 +1,41 @@
-import { createSignal, createEffect, onMount } from 'solid-js';
+import { createSignal, createEffect, onMount, Show } from 'solid-js';
 import { LanguageToggle } from './LanguageToggle';
+
+interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
 
 export function Navbar() {
   const [isUserTypeOpen, setIsUserTypeOpen] = createSignal(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = createSignal(false);
   const [selectedUserType, setSelectedUserType] = createSignal('General Contractor');
   const [showHR, setShowHR] = createSignal(false);
   const [hrStatus, setHrStatus] = createSignal<'trial' | 'active' | null>(null);
+  const [user, setUser] = createSignal<User | null>(null);
+  const [isLoading, setIsLoading] = createSignal(true);
 
-  // Check module access on mount
+  // Check authentication status on mount
   onMount(async () => {
+    try {
+      // Check if user is authenticated
+      const authResponse = await fetch('/api/me');
+      if (authResponse.ok) {
+        const authData = await authResponse.json();
+        if (authData.user) {
+          setUser(authData.user);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+
+    // Check module access
     try {
       const response = await fetch('/api/company/modules?companyId=1');
       const data = await response.json();
@@ -28,6 +55,44 @@ export function Navbar() {
     } catch (error) {
       console.error('Error checking module access:', error);
     }
+  });
+
+  // Get user initials
+  const getUserInitials = () => {
+    const currentUser = user();
+    if (currentUser) {
+      const first = currentUser.firstName?.charAt(0) || '';
+      const last = currentUser.lastName?.charAt(0) || '';
+      return (first + last).toUpperCase() || currentUser.email.charAt(0).toUpperCase();
+    }
+    return '?';
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect to login even if logout API fails
+      window.location.href = '/login';
+    }
+  };
+
+  // Close dropdowns when clicking outside
+  onMount(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.user-menu-container')) {
+        setIsUserMenuOpen(false);
+      }
+      if (!target.closest('.user-type-container')) {
+        setIsUserTypeOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   });
 
   const userTypes = [
@@ -131,7 +196,7 @@ export function Navbar() {
           {/* Right Side Actions */}
           <div class="flex items-center space-x-4">
             {/* User Type Dropdown */}
-            <div class="relative">
+            <div class="relative user-type-container">
               <button
                 onClick={() => setIsUserTypeOpen(!isUserTypeOpen())}
                 class="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 rounded transition-all border border-gray-700"
@@ -185,11 +250,81 @@ export function Navbar() {
             </a>
 
             {/* User Menu */}
-            <button class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-all">
-              <div class="h-8 w-8 bg-gray-700 rounded-full flex items-center justify-center">
-                <span class="text-sm font-medium text-white">JD</span>
-              </div>
-            </button>
+            <div class="relative user-menu-container">
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen())}
+                class="flex items-center space-x-2 p-2 hover:bg-gray-800 rounded transition-all"
+              >
+                <div class="h-8 w-8 bg-gray-700 rounded-full flex items-center justify-center">
+                  <Show when={!isLoading()} fallback={<span class="text-sm font-medium text-gray-400">...</span>}>
+                    <span class="text-sm font-medium text-white">{getUserInitials()}</span>
+                  </Show>
+                </div>
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+
+              {isUserMenuOpen() && (
+                <div class="absolute right-0 mt-2 w-56 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50">
+                  <Show when={user()} fallback={
+                    <div class="py-2">
+                      <a
+                        href="/login"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center space-x-3 transition-colors"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Sign In</span>
+                      </a>
+                      <a
+                        href="/register"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center space-x-3 transition-colors"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                        </svg>
+                        <span>Create Account</span>
+                      </a>
+                    </div>
+                  }>
+                    <div class="py-2">
+                      {/* User Info */}
+                      <div class="px-4 py-3 border-b border-gray-700">
+                        <p class="text-sm font-medium text-white">
+                          {user()?.firstName} {user()?.lastName}
+                        </p>
+                        <p class="text-xs text-gray-400 truncate">{user()?.email}</p>
+                        <p class="text-xs text-ca-orange mt-1 capitalize">{user()?.role?.replace('_', ' ')}</p>
+                      </div>
+
+                      {/* Menu Items */}
+                      <a
+                        href="/settings"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center space-x-3 transition-colors"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Settings</span>
+                      </a>
+
+                      <button
+                        onClick={handleLogout}
+                        class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-700 hover:text-red-300 flex items-center space-x-3 transition-colors"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </Show>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
