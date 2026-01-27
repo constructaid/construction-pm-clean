@@ -6,9 +6,11 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { safetyMeetings } from '../../../lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const url = new URL(request.url);
     const projectId = parseInt(url.searchParams.get('projectId') || '0');
 
@@ -17,6 +19,12 @@ export const GET: APIRoute = async ({ request }) => {
         JSON.stringify({ success: false, error: 'Project ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     const meetings = await db
@@ -38,8 +46,9 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const data = await request.json();
 
     // Validate required fields
@@ -49,6 +58,14 @@ export const POST: APIRoute = async ({ request }) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, data.projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const { user } = rbacResult;
 
     // Validate toolbox meeting duration (minimum 15 minutes per DISD)
     if (data.meetingType === 'toolbox' && data.duration < 15) {
@@ -81,7 +98,7 @@ export const POST: APIRoute = async ({ request }) => {
         isMandatory: data.isMandatory !== false,
         attachments: JSON.stringify(data.attachments || []),
         signInSheet: data.signInSheet || null,
-        createdBy: data.createdBy || 1, // TODO: Get from session
+        createdBy: user.id, // Use authenticated user ID
       })
       .returning();
 

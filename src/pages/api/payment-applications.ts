@@ -1,7 +1,10 @@
 /**
  * API endpoint for Payment Applications (G702/G703)
+ * SECURITY: Requires canManageFinancials permission for all operations
  */
 import type { APIRoute } from 'astro';
+import { checkRBAC } from '../../lib/middleware/rbac';
+import { UnauthorizedError } from '../../lib/api/error-handler';
 
 // Mock data structure for payment applications
 interface PaymentApplication {
@@ -136,11 +139,35 @@ const sampleLineItems: PaymentApplicationLineItem[] = [
 paymentApplicationsStore.set(1, samplePaymentApp);
 lineItemsStore.set(1, sampleLineItems);
 
-export const GET: APIRoute = async ({ request, url }) => {
+export const GET: APIRoute = async (context) => {
+  const { request, url } = context;
   const projectId = url.searchParams.get('projectId');
   const id = url.searchParams.get('id');
 
   try {
+    // RBAC Check - requires canManageFinancials permission (financial data)
+    if (!projectId && !id) {
+      throw new UnauthorizedError('projectId is required for payment applications');
+    }
+
+    // Get projectId from the payment app if id is provided
+    let targetProjectId = projectId ? parseInt(projectId) : null;
+    if (id && !targetProjectId) {
+      const payApp = paymentApplicationsStore.get(parseInt(id));
+      if (payApp) {
+        targetProjectId = payApp.projectId;
+      }
+    }
+
+    if (!targetProjectId) {
+      throw new UnauthorizedError('projectId cannot be determined');
+    }
+
+    const rbacResult = await checkRBAC(context, targetProjectId, 'canManageFinancials');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
     // Get single payment application with line items
     if (id) {
       const payApp = paymentApplicationsStore.get(parseInt(id));
@@ -190,9 +217,20 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const body = await request.json();
+
+    // RBAC Check - requires canManageFinancials permission
+    if (!body.projectId) {
+      throw new UnauthorizedError('projectId is required to create payment application');
+    }
+
+    const rbacResult = await checkRBAC(context, body.projectId, 'canManageFinancials');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
 
     const newId = paymentApplicationsStore.size + 1;
     const now = new Date().toISOString();
@@ -260,7 +298,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request, url }) => {
+export const PUT: APIRoute = async (context) => {
+  const { request, url } = context;
   const id = url.searchParams.get('id');
 
   if (!id) {
@@ -271,7 +310,6 @@ export const PUT: APIRoute = async ({ request, url }) => {
   }
 
   try {
-    const body = await request.json();
     const existing = paymentApplicationsStore.get(parseInt(id));
 
     if (!existing) {
@@ -280,6 +318,14 @@ export const PUT: APIRoute = async ({ request, url }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    // RBAC Check - requires canManageFinancials permission
+    const rbacResult = await checkRBAC(context, existing.projectId, 'canManageFinancials');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const body = await request.json();
 
     // Recalculate financial values
     const contractSumToDate = body.originalContractSum + (body.netChangeByChangeOrders || 0);
@@ -323,7 +369,8 @@ export const PUT: APIRoute = async ({ request, url }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ url }) => {
+export const DELETE: APIRoute = async (context) => {
+  const { url } = context;
   const id = url.searchParams.get('id');
 
   if (!id) {
@@ -334,15 +381,23 @@ export const DELETE: APIRoute = async ({ url }) => {
   }
 
   try {
-    const deleted = paymentApplicationsStore.delete(parseInt(id));
-    lineItemsStore.delete(parseInt(id));
+    const existing = paymentApplicationsStore.get(parseInt(id));
 
-    if (!deleted) {
+    if (!existing) {
       return new Response(JSON.stringify({ error: 'Payment application not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    // RBAC Check - requires canManageFinancials permission
+    const rbacResult = await checkRBAC(context, existing.projectId, 'canManageFinancials');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    paymentApplicationsStore.delete(parseInt(id));
+    lineItemsStore.delete(parseInt(id));
 
     return new Response(JSON.stringify({ message: 'Payment application deleted successfully' }), {
       status: 200,

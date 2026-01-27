@@ -13,9 +13,11 @@ import {
   workerCertifications,
 } from '../../../lib/db/schema';
 import { eq, and, gte, lte, count, sql } from 'drizzle-orm';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const url = new URL(request.url);
     const projectId = parseInt(url.searchParams.get('projectId') || '0');
 
@@ -24,6 +26,12 @@ export const GET: APIRoute = async ({ request }) => {
         JSON.stringify({ success: false, error: 'Project ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     // Calculate date ranges

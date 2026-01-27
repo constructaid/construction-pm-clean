@@ -6,9 +6,11 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { safetyInspections } from '../../../lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { checkRBAC } from '../../../lib/middleware/rbac';
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const url = new URL(request.url);
     const projectId = parseInt(url.searchParams.get('projectId') || '0');
 
@@ -17,6 +19,12 @@ export const GET: APIRoute = async ({ request }) => {
         JSON.stringify({ success: false, error: 'Project ID is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    // RBAC: Require authentication and project read access
+    const rbacResult = await checkRBAC(context, projectId, 'canRead');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
     }
 
     const inspections = await db
@@ -38,8 +46,9 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
+    const { request } = context;
     const data = await request.json();
 
     if (!data.projectId || !data.inspectionType || !data.inspectionDate || !data.inspectorName) {
@@ -49,6 +58,14 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // RBAC: Require authentication and project write access
+    const rbacResult = await checkRBAC(context, data.projectId, 'canWrite');
+    if (rbacResult instanceof Response) {
+      return rbacResult;
+    }
+
+    const { user } = rbacResult;
+
     const [inspection] = await db
       .insert(safetyInspections)
       .values({
@@ -56,7 +73,7 @@ export const POST: APIRoute = async ({ request }) => {
         inspectionNumber: data.inspectionNumber,
         inspectionType: data.inspectionType,
         inspectionDate: new Date(data.inspectionDate),
-        inspectedBy: data.inspectedBy || 1,
+        inspectedBy: data.inspectedBy || user.id, // Use authenticated user ID
         inspectorName: data.inspectorName,
         inspectorCompany: data.inspectorCompany || null,
         areasInspected: JSON.stringify(data.areasInspected || []),
@@ -73,7 +90,7 @@ export const POST: APIRoute = async ({ request }) => {
         followUpCompleted: false,
         photos: JSON.stringify(data.photos || []),
         attachments: JSON.stringify(data.attachments || []),
-        createdBy: data.createdBy || 1,
+        createdBy: user.id, // Use authenticated user ID
       })
       .returning();
 
