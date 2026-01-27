@@ -5,7 +5,7 @@
  */
 
 import { createSignal, createEffect, For, Show } from 'solid-js';
-import { Mail, Paperclip, Search, Filter, RefreshCw, Brain, Calendar, User } from 'lucide-react';
+import { Mail, Paperclip, Search, Filter, RefreshCw, Brain, Calendar, User } from 'lucide-solid';
 
 interface Email {
   id: number;

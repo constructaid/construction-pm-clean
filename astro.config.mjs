@@ -13,7 +13,14 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     ssr: {
-      external: ['canvas']
+      // Externalize native Node.js modules that shouldn't be bundled
+      external: ['canvas', 'pg', 'pg-native', 'bcryptjs', 'jsonwebtoken'],
+      noExternal: []
+    },
+    build: {
+      rollupOptions: {
+        external: ['pg', 'pg-native', 'canvas', 'bcryptjs', 'jsonwebtoken']
+      }
     }
   },
 
